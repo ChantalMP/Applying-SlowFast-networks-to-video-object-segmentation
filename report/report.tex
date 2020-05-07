@@ -29,12 +29,12 @@ The main work of consideration is the SlowFast Network \cite{slow_fast}, which i
 OSVOS \cite{osvos} focuses on the task of one-shot video segmentation, where in test time, the network is fine-tuned on the first frame of the video, which has a manually annotated mask. This fine-tuning allows the network to adapt to the object in that scene. They show this supervision signal is beneficial, and achieve state of the art results.
 
 
-Mask R-CNN (todo quote) is one of the best known architectures for image segmentation. They extend the popular faster R-CNN architecture with a masking layer at the end. Consequently Track R-CNN extended this to video segmentation. It may be worth looking into these as we will have to perform a similar adaptation.
+Mask R-CNN \cite{mask_rcnn} is one of the best known architectures for image segmentation. They extend the popular faster R-CNN architecture with a masking layer at the end. Consequently Track R-CNN \cite{track_rcnn} extended this to video segmentation. It may be worth looking into these as we will have to perform a similar adaptation.
 
 
 \section{Approach}
 \subsection{Dataset}
-We will use one or both of the DAVIS datasets \cite{davis}. These datasets include videos with segmentation ground truths for every frame. In DAVIS16 always just one object is in the foreground and annotated as such , whereas in DAVIS17 also multiple segmented objects can occur in one frame. 
+We will use one or both of the DAVIS datasets \cite{davis_2016,davis_2017}. These datasets include videos with segmentation ground truths for every frame. In DAVIS16 always just one object is in the foreground and annotated as such , whereas in DAVIS17 also multiple segmented objects can occur in one frame. 
 \subsection{Contributions}
 The goal of this project is to adapt SlowFast Networks for video object segmentation and evaluate their benefit. The hope is that the separate pathways give the network the ability to get a general understanding of the object’s location through the slow pathway and additional detailed knowledge of which pixels to segment through the fast part.
 

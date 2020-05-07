@@ -11,4 +11,28 @@ Christoph Feichtenhofer, Haoqi Fan, Jitendra Malik, and Kaiming He.
 \newblock Slowfast networks for video recognition.
 \newblock {\em CoRR}, abs/1812.03982, 2018.
 
+\bibitem{mask_rcnn}
+Kaiming He, Georgia Gkioxari, Piotr Doll{\'{a}}r, and Ross~B. Girshick.
+\newblock Mask {R-CNN}.
+\newblock {\em CoRR}, abs/1703.06870, 2017.
+
+\bibitem{davis_2016}
+F.~Perazzi, J.~Pont-Tuset, B.~McWilliams, L.~{Van Gool}, M.~Gross, and
+  A.~Sorkine-Hornung.
+\newblock A benchmark dataset and evaluation methodology for video object
+  segmentation.
+\newblock In {\em Computer Vision and Pattern Recognition}, 2016.
+
+\bibitem{davis_2017}
+Jordi Pont-Tuset, Federico Perazzi, Sergi Caelles, Pablo Arbel\'aez, Alexander
+  Sorkine-Hornung, and Luc {Van Gool}.
+\newblock The 2017 davis challenge on video object segmentation.
+\newblock {\em arXiv:1704.00675}, 2017.
+
+\bibitem{track_rcnn}
+Paul Voigtlaender, Michael Krause, Aljosa Osep, Jonathon Luiten, Berin
+  Balachandar~Gnana Sekar, Andreas Geiger, and Bastian Leibe.
+\newblock {MOTS:} multi-object tracking and segmentation.
+\newblock {\em CoRR}, abs/1902.03604, 2019.
+
 \end{thebibliography}

@@ -1,0 +1,14 @@
+\begin{thebibliography}{1}
+
+\bibitem{osvos}
+Sergi Caelles, Kevis{-}Kokitsi Maninis, Jordi Pont{-}Tuset, Laura
+  Leal{-}Taix{\'{e}}, Daniel Cremers, and Luc~Van Gool.
+\newblock One-shot video object segmentation.
+\newblock {\em CoRR}, abs/1611.05198, 2016.
+
+\bibitem{slow_fast}
+Christoph Feichtenhofer, Haoqi Fan, Jitendra Malik, and Kaiming He.
+\newblock Slowfast networks for video recognition.
+\newblock {\em CoRR}, abs/1812.03982, 2018.
+
+\end{thebibliography}

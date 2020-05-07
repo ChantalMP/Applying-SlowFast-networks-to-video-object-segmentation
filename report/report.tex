@@ -36,7 +36,7 @@ Mask R-CNN \cite{mask_rcnn} is one of the best known architectures for image seg
 \subsection{Dataset}
 We will use one or both of the DAVIS datasets \cite{davis_2016,davis_2017}. These datasets include videos with segmentation ground truths for every frame. In DAVIS16 always just one object is in the foreground and annotated as such , whereas in DAVIS17 also multiple segmented objects can occur in one frame. 
 \subsection{Contributions}
-The goal of this project is to adapt SlowFast Networks for video object segmentation and evaluate their benefit. The hope is that the separate pathways give the network the ability to get a general understanding of the object’s location through the slow pathway and additional detailed knowledge of which pixels to segment through the fast part.
+The goal of this project is to adapt SlowFast Networks for video object segmentation, which can be seen in Fig \ref{fig:slowfastadapted}, and evaluate their benefit. The hope is that the separate pathways give the network the ability to get a general understanding of the object’s location through the slow pathway and additional detailed knowledge of which pixels to segment through the fast part.
 
 
 \subsection{Planned Steps}
@@ -49,8 +49,17 @@ Until the first presentation, we hope to finish the implementation of the video 
 \section{Possible Challenges}
 As our goal is to have our final network predict the segmentation only for one object, it is not clear how to train with when we have multiple objects in the frame, as it is the case for DAVIS-2017. We will need to experiment with different approaches in this regard. It can also be a challenge to show the benefit of using a two pathway architecture, as for many actions the difference can be negligible. Because of this, we might need to especially measure the performance on high speed actions.
 
+
+\begin{figure*}
+	\centering
+	\includegraphics[width=1.8\columnwidth]{SlowFastAdapted.jpg}
+	\caption{Original SlowFast architecture adapter for davis dataset and video object segmentation.}
+	\label{fig:slowfastadapted}
+\end{figure*}
 \newpage
+
 \bibliographystyle{plain}
 \bibliography{literature}
+
 
 \end{document}

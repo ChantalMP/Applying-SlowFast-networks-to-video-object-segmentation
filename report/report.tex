@@ -24,25 +24,25 @@
 The general idea of our project is to investigate the benefit SlowFast Networks \cite{slow_fast} can bring in Video Object Segmentation. Additionally the approach should be extended to perform one shot segmentation thus given the correct segmentation for the first frame apply a segmentation for the whole video. 
 
 \section{Related Work}
-The main work of consideration is the SlowFast Network \cite{slow_fast}, which introduces the idea of using two pathways to analyze a video. This architecture has one fast and one slow pathway, allowing it to concentrate on different aspects of the video while keeping the performance high. The slow pathway is computationally much more expensive than the fast pathway, and therefore works with 2 fps, whereas the fast pathway is able to work with 16 fps. Originally this architecture is used for video action classification, where the task is to find different actions in video and classify them correctly. They show this two pathway approach is especially beneficial if there is a high speed action such as clapping or dancing involved.  
+The main work of consideration is the SlowFast Networks \cite{slow_fast}, which introduces the idea of using two pathways to analyze a video. This architecture has one fast and one slow pathway, allowing it to concentrate on different aspects of the video while keeping the performance high. The slow pathway is computationally much more expensive than the fast pathway, and therefore works with 2 fps, whereas the fast pathway is able to work with 16 fps. Originally this architecture is used for video action classification, where the task is to find different actions in video and classify them correctly. They show this two pathway approach is especially beneficial if there is a high speed action such as clapping or dancing involved.  
 
 OSVOS \cite{osvos} focuses on the task of one-shot video segmentation, where in test time, the network is fine-tuned on the first frame of the video, which has a manually annotated mask. This fine-tuning allows the network to adapt to the object in that scene. They show this supervision signal is beneficial, and achieve state of the art results.
 
 
-Mask R-CNN \cite{mask_rcnn} is one of the best known architectures for image segmentation. They extend the popular faster R-CNN architecture with a masking layer at the end. Consequently Track R-CNN \cite{track_rcnn} extended this to video segmentation. It may be worth looking into these as we will have to perform a similar adaptation.
+Mask R-CNN \cite{mask_rcnn} is one of the best known architectures for image segmentation. They extend the popular faster R-CNN architecture with a masking layer at the end. Consequently Track R-CNN \cite{track_rcnn} extends this to video segmentation. It may be worth looking into these as we will have to perform a similar adaptation.
 
 
 \section{Approach}
 \subsection{Dataset}
-We will use one or both of the DAVIS datasets \cite{davis_2016,davis_2017}. These datasets include videos with segmentation ground truths for every frame. In DAVIS16 always just one object is in the foreground and annotated as such , whereas in DAVIS17 also multiple segmented objects can occur in one frame. 
+We will use one or both of the DAVIS datasets \cite{davis_2016,davis_2017}. These datasets include videos with segmentation ground truths for every frame. In DAVIS16 always just one object is in the foreground and annotated as such, whereas in DAVIS17 also multiple segmented objects can occur in one frame. 
 \subsection{Contributions}
 The goal of this project is to adapt SlowFast Networks for video object segmentation, which can be seen in Fig \ref{fig:slowfastadapted}, and evaluate their benefit. The hope is that the separate pathways give the network the ability to get a general understanding of the object’s location through the slow pathway and additional detailed knowledge of which pixels to segment through the fast part.
 
 
 \subsection{Planned Steps}
-Our first step will be to get the SlowFast Network repository running for action classification, so we have a working version we can adapt for our needs. Afterwards  we will first alter the network to work with our data and second replace the current classification layers with segmentation layers. Having done that we can start the training of our network on our dataset to teach it a general understanding of foreground-background segmentation.
+Our first step will be to get the SlowFast Networks repository running for action classification, so we have a working version we can adapt for our needs. Afterwards  we will first alter the network to work with our data and second replace the current classification layers with segmentation layers. Having done that we can start the training of our network on our dataset to teach it a general understanding of foreground-background segmentation.
 Once we have a working segmentation network we will concentrate on implementing the one-shot approach. For this we will need to finetune our network on a single annotated image in test time.
-Another important part of our project will be to evaluate the value of the SlowFast architecture for video object segmentation. Here we will perform several experiments like using only the slow or only the fast pathway in comparison to the combination. In the SlowFast Network the fast pathway is very lightweight, which is convenient as it needs to work with a lot of frames. However this might affect its ability to perform good on its own, which makes a direct comparison unfair, so here we might have to consider computational advantages of the architecture as well.
+Another important part of our project will be to evaluate the value of the SlowFast architecture for video object segmentation. Here we will perform several experiments like using only the slow or only the fast pathway in comparison to the combination. In the SlowFast Networks the fast pathway is very lightweight, which is convenient as it needs to work with a lot of frames. However this might affect its ability to perform good on its own, which makes a direct comparison unfair, so here we might have to consider computational advantages of the architecture as well.
 
 \section{Milestones}
 Until the first presentation, we hope to finish the implementation of the video object segmentation using the SlowFast architecture, and get some preliminary results. Afterwards we plan to work on one shot video segmentation until the second presentation.
@@ -53,7 +53,7 @@ As our goal is to have our final network predict the segmentation only for one o
 \begin{figure*}
 	\centering
 	\includegraphics[width=1.8\columnwidth]{SlowFastAdapted.jpg}
-	\caption{Original SlowFast architecture adapter for davis dataset and video object segmentation.}
+	\caption{Original SlowFast architecture adapted for DAVIS dataset and Video Object Segmentation.}
 	\label{fig:slowfastadapted}
 \end{figure*}
 \newpage

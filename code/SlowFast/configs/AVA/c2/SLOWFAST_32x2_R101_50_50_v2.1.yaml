@@ -20,11 +20,14 @@ DETECTION:
 AVA:
   BGR: False
   DETECTION_SCORE_THRESH: 0.8
-  TEST_PREDICT_BOX_LISTS: ["person_box_67091280_iou90/ava_detection_val_boxes_and_labels.csv"]
+  TEST_PREDICT_BOX_LISTS: ["ava_val_predicted_boxes.csv"]
   TRAIN_GT_BOX_LISTS: ["ava_train_v2.1.csv"]
   LABEL_MAP_FILE: ava_action_list_v2.1_for_activitynet_2018.pbtxt
   EXCLUSION_FILE: ava_val_excluded_timestamps_v2.1.csv
   GROUNDTRUTH_FILE: ava_val_v2.1.csv
+  FRAME_DIR: data/ava/frames
+  FRAME_LIST_DIR: data/ava/frame_lists
+  ANNOTATION_DIR: data/ava/annotations
 SLOWFAST:
   ALPHA: 4
   BETA_INV: 8
@@ -64,11 +67,11 @@ MODEL:
 TEST:
   ENABLE: True
   DATASET: ava
-  BATCH_SIZE: 8
+  BATCH_SIZE: 1
 DATA_LOADER:
   NUM_WORKERS: 2
   PIN_MEMORY: True
-NUM_GPUS: 8
+NUM_GPUS: 1
 NUM_SHARDS: 1
 RNG_SEED: 0
 OUTPUT_DIR: .

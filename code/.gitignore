@@ -1,4 +1,12 @@
 /data/
 /SlowFast/data/
-.idea
 /SlowFast/data/ava/model/
+
+
+.idea/code.iml
+.idea/deployment.xml
+.idea/inspectionProfiles
+.idea/misc.xml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/workspace.xml

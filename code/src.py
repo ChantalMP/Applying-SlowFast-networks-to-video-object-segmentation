@@ -19,3 +19,28 @@
 
 # Evaluation
 # Slow rate of fast how is it etc etc.
+from dataset import DAVISDataset
+from torch.utils.data import DataLoader
+from model import SegmentationModel
+import torch
+from torchvision.transforms import Compose, ToTensor
+
+
+def main():
+    transforms = Compose([ToTensor()])
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
+    dataloader = DataLoader(dataset, batch_size=1)
+    model = SegmentationModel()
+
+    for seq in dataloader:  # TODO make sure this works
+        imgs, masks, boxes = seq
+        imgs = torch.stack(imgs)[:, 0, :, :]  # TODO decide if 0 should be first or second
+        masks = [elem[:, 0, :, :] for elem in masks]
+        boxes = [elem[:, 0, :] for elem in boxes]
+        output = model(imgs[:20], boxes[:20], masks[:20])
+        a = 1
+    pass
+
+
+if __name__ == '__main__':
+    main()

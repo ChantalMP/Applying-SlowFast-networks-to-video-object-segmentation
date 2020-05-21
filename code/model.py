@@ -1,9 +1,14 @@
 import torch
 from torch import nn
 import torchvision.models as models
+from torchvision.transforms import ToTensor
+from roi_heads_custom import RoIHeads
+from torchvision.ops import RoIAlign
+from torchvision.models.detection.mask_rcnn import MaskRCNNHeads, MaskRCNNPredictor
 
 
 # TODO consider how to merge slow and fast, also consider regular lateral connections if necessary
+
 
 class SegmentationModel(nn.Module):
     def __init__(self):
@@ -12,15 +17,28 @@ class SegmentationModel(nn.Module):
 
         self.fast_conv1 = nn.Conv3d(
             in_channels=512,
-            out_channels=30,
+            out_channels=64,
             kernel_size=(16, 3, 3))  # TODO consider padding
 
         self.slow_conv1 = nn.Conv3d(
             in_channels=512,
-            out_channels=30,
+            out_channels=256,
             kernel_size=(4, 3, 3)  # TODO consider padding
             # TODO first version is without stride but with smaller kernel
         )
+
+        mask_roi_pool = RoIAlign(output_size=14, spatial_scale=1, sampling_ratio=2)  # TODO calculate final value for spatial scale and use that one
+
+        mask_layers = (256, 256, 256, 256)
+        mask_dilation = 1
+        mask_head = MaskRCNNHeads(14, mask_layers, mask_dilation)  # TODo check sizes
+
+        mask_predictor_in_channels = 256  # == mask_layers[-1]
+        mask_dim_reduced = 256
+        mask_predictor = MaskRCNNPredictor(mask_predictor_in_channels,
+                                           mask_dim_reduced, num_classes=1)  # TODO either 1 or 2
+
+        self.roi_head = RoIHeads(mask_roi_pool=mask_roi_pool, mask_head=mask_head, mask_predictor=mask_predictor)
 
         # TODO lateral connection
 
@@ -48,14 +66,23 @@ class SegmentationModel(nn.Module):
         x = resnet.layer4(x)
         return x
 
-    def forward(self, x):
-        resnet_features = self.extract_resnet_features(x)
+    def forward(self, x, bboxes, targets=None):
+        resnet_features = self.extract_resnet_features(x)  # TODO extend features of resnet 0s
         # TODO this can actually be vectorized, but not sure if it is possible to do all at once do to memory constraints, shouldn't effect the outcome nonetheless
+        all_features = []
 
-        image_idx = 10
-        fast_features = self.fast_conv1(resnet_features[image_idx - 8:image_idx + 8].unsqueeze(0).transpose(1, 2))
-        slow_features = self.slow_conv1(resnet_features[image_idx - 2:image_idx + 2].unsqueeze(0).transpose(1, 2))
+        for idx in range(4):  # len(x)):
+            idx = 10  # TODO delete this
+            # TODO modify this according to slowfast
+            fast_features = self.fast_conv1(resnet_features[idx - 8:idx + 8].unsqueeze(0).transpose(1, 2))
+            slow_features = self.slow_conv1(resnet_features[idx - 2:idx + 2].unsqueeze(0).transpose(1, 2))
+            features = torch.cat([slow_features, fast_features], dim=1)[:, :, 0, :, :]
+            all_features.append(features)
 
+        all_features = torch.cat(all_features)
+        image_sizes = [tuple(x.shape[2:4])] * len(all_features)
+        roi_output = self.roi_head(all_features, bboxes[:4], image_sizes[:4], targets[:4])
+        # TODO now like maskrcnn
         print('hi')
         pass
 

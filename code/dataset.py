@@ -6,27 +6,29 @@ from PIL import Image
 
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.patches as patches
+import torch
 
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py
 # Reference how to compute the bounding boxes: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 
 class DAVISDataset(Dataset):
-    def __init__(self, root, subset='train', resolution='480p'):
+    def __init__(self, root, subset='train', resolution='480p', transforms=None):
         self.root = root
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
         self.imagesets_path = os.path.join(self.root, 'ImageSets', '2017')
+        self.transforms = transforms
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
-        sequences_names = [x.strip() for x in tmp]
+        sequences_names = [x.strip() for x in tmp][:1]
         self.sequences = defaultdict(dict)
 
         for seq in sequences_names:
-            images = np.sort(glob(os.path.join(self.img_path, seq, '*.jpg'))).tolist()[:5]
+            images = np.sort(glob(os.path.join(self.img_path, seq, '*.jpg'))).tolist()
             self.sequences[seq]['images'] = images
-            masks = np.sort(glob(os.path.join(self.mask_path, seq, '*.png'))).tolist()[:5]
+            masks = np.sort(glob(os.path.join(self.mask_path, seq, '*.png'))).tolist()
             #masks.extend([-1] * (len(images) - len(masks)))
             self.sequences[seq]['masks'] = masks
 
@@ -61,8 +63,8 @@ class DAVISDataset(Dataset):
                     ymax = np.max(pos[0])
                     img_boxes.append(np.array([xmin, ymin, xmax, ymax]))
 
-                masks.append(img_masks)
-                boxes.append(img_boxes)
+                masks.append(torch.tensor(np.stack(img_masks)))
+                boxes.append(torch.tensor(np.stack(img_boxes)))
 
             self.data.append((imgs, masks, boxes))
 
@@ -70,7 +72,12 @@ class DAVISDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, i):
-        return self.data[i]
+        imgs, masks, boxes = self.data[i]
+        if self.transforms:
+            for i in range(len(imgs)):
+                imgs[i] = self.transforms(imgs[i])
+
+        return imgs, masks, boxes
 
 
 if __name__ == '__main__':

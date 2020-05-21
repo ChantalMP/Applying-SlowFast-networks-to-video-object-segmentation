@@ -22,7 +22,7 @@ from slowfast.utils.meters import AVAMeter, TrainMeter, ValMeter
 logger = logging.get_logger(__name__)
 
 
-def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg):
+def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg,device):
     """
     Perform the video training for one epoch.
     Args:
@@ -44,16 +44,16 @@ def train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg):
         # Transfer the data to the current GPU device.
         if isinstance(inputs, (list,)):
             for i in range(len(inputs)):
-                inputs[i] = inputs[i].cuda(non_blocking=True)
+                inputs[i] = inputs[i].to(device=device,non_blocking=True)
         else:
-            inputs = inputs.cuda(non_blocking=True)
-        labels = labels.cuda()
+            inputs = inputs.to(device=device,non_blocking=True)
+        labels = labels.to(device=device)
         for key, val in meta.items():
             if isinstance(val, (list,)):
                 for i in range(len(val)):
-                    val[i] = val[i].cuda(non_blocking=True)
+                    val[i] = val[i].to(device=device,non_blocking=True)
             else:
-                meta[key] = val.cuda(non_blocking=True)
+                meta[key] = val.to(device=device,non_blocking=True)
 
         # Update the learning rate.
         lr = optim.get_epoch_lr(cur_epoch + float(cur_iter) / data_size, cfg)
@@ -236,7 +236,7 @@ def calculate_and_update_precise_bn(loader, model, num_iters=200):
     update_bn_stats(model, _gen_loader(), num_iters)
 
 
-def train(cfg):
+def train(cfg,device):
     """
     Train a video model for many epochs on train set and evaluate it on val set.
     Args:
@@ -257,7 +257,7 @@ def train(cfg):
     logger.info(pprint.pformat(cfg))
 
     # Build the video model and print model statistics.
-    model = build_model(cfg)
+    model = build_model(cfg,device=device)
     if du.is_master_proc() and cfg.LOG_MODEL_INFO:
         misc.log_model_info(model, cfg, is_train=True)
 
@@ -305,7 +305,7 @@ def train(cfg):
         # Shuffle the dataset.
         loader.shuffle_dataset(train_loader, cur_epoch)
         # Train for one epoch.
-        train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg)
+        train_epoch(train_loader, model, optimizer, train_meter, cur_epoch, cfg,device)
 
         # Compute precise BN stats.
         if cfg.BN.USE_PRECISE_STATS and len(get_bn_modules(model)) > 0:

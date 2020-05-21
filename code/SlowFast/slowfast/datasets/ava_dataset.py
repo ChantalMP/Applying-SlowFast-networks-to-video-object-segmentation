@@ -13,7 +13,7 @@ from .build import DATASET_REGISTRY
 
 logger = logging.getLogger(__name__)
 
-
+#TODO adapt or replace this class for DAVIS17
 @DATASET_REGISTRY.register()
 class Ava(torch.utils.data.Dataset):
     """

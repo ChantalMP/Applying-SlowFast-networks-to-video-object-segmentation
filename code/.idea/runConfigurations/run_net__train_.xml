@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/SlowFast/tools/run_net.py" />
-    <option name="PARAMETERS" value="--cfg configs/AVA/SLOWFAST_32x2_R50_SHORT.yaml NUM_GPUS 1 TRAIN.BATCH_SIZE 4 DATA_LOADER.NUM_WORKERS 0" />
+    <option name="PARAMETERS" value="--cfg configs/AVA/SLOWFAST_32x2_R50_SHORT.yaml NUM_GPUS 1 TRAIN.BATCH_SIZE 1 DATA_LOADER.NUM_WORKERS 0" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

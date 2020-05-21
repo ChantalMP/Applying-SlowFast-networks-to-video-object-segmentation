@@ -8,8 +8,10 @@ import torch
 import slowfast.utils.multiprocessing as mpu
 from slowfast.utils.parser import load_config, parse_args
 
-from test_net import test
-from train_net import train
+from tools.test_net import test
+from tools.train_net import train
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 
 def main():
@@ -18,6 +20,9 @@ def main():
     """
     args = parse_args()
     cfg = load_config(args)
+    cfg.device = 'cpu'
+
+    device = torch.device(cfg.device)
 
     # Perform training.
     if cfg.TRAIN.ENABLE:
@@ -37,7 +42,7 @@ def main():
                 daemon=False,
             )
         else:
-            train(cfg=cfg)
+            train(cfg=cfg,device=device)
 
 
 
@@ -59,7 +64,7 @@ def main():
                 daemon=False,
             )
         else:
-            test(cfg=cfg)
+            test(cfg=cfg,device=device)
 
 
 if __name__ == "__main__":

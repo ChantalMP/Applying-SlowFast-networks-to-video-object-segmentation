@@ -8,6 +8,7 @@ import sys
 
 import slowfast.utils.checkpoint as cu
 from slowfast.config.defaults import get_cfg
+import torch
 
 
 def parse_args():

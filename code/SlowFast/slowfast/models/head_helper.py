@@ -110,6 +110,9 @@ class ResNetRoIHead(nn.Module):
             out = t_pool(inputs[pathway])
             assert out.shape[2] == 1
             out = torch.squeeze(out, 2)
+            # TODO probably this out works, but replace the following with code from mask rcnn
+            # TODO rpn network is probably needed, both detection and masking heads will be needs
+            # TODO loss should also be from those new heads
 
             roi_align = getattr(self, "s{}_roi".format(pathway))
             out = roi_align(out, bboxes)
@@ -197,7 +200,7 @@ class ResNetBasicHead(nn.Module):
             len(inputs) == self.num_pathways
         ), "Input tensor does not contain {} pathway".format(self.num_pathways)
         pool_out = []
-        for pathway in range(self.num_pathways):
+        for pathway in range(self.num_pathways): # TODO don't pool width and height 14x14 is correct
             m = getattr(self, "pathway{}_avgpool".format(pathway))
             pool_out.append(m(inputs[pathway]))
         x = torch.cat(pool_out, 1)

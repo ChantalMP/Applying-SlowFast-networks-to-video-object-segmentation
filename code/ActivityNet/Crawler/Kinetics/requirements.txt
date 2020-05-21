@@ -1,4 +1,0 @@
-#python2.7
-joblib==0.9.4
-pandas==0.19.2
-youtube-dl

@@ -30,14 +30,16 @@ def main():
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=1)
-    model = SegmentationModel()
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    model = SegmentationModel(device=device)
+    model.to(device)
 
     for seq in dataloader:  # TODO make sure this works
         imgs, masks, boxes = seq
-        imgs = torch.stack(imgs)[:, 0, :, :]  # TODO decide if 0 should be first or second
-        masks = [elem[:, 0, :, :] for elem in masks]
-        boxes = [elem[:, 0, :] for elem in boxes]
-        output = model(imgs[:20], boxes[:20], masks[:20])
+        imgs = torch.stack(imgs)[:, 0, :, :].to(device)  # TODO decide if 0 should be first or second
+        masks = [elem[:, 0, :, :].to(device) for elem in masks]
+        boxes = [elem[:, 0, :].to(device) for elem in boxes]
+        output = model(imgs, boxes, masks)
         a = 1
     pass
 

@@ -11,9 +11,15 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNHeads, MaskRCNNPredic
 
 
 class SegmentationModel(nn.Module):
-    def __init__(self):
+    def __init__(self, device):
         super(SegmentationModel, self).__init__()
+        self.device = device
+
         self.resnet = models.resnet18(pretrained=True)
+        self.resnet.layer3._modules['0'].conv1.stride = (1, 1)
+        self.resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
+        self.resnet.layer4._modules['0'].conv1.stride = (1, 1)
+        self.resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
 
         self.fast_conv1 = nn.Conv3d(
             in_channels=512,
@@ -31,7 +37,7 @@ class SegmentationModel(nn.Module):
 
         mask_layers = (256, 256, 256, 256)
         mask_dilation = 1
-        mask_head = MaskRCNNHeads(14, mask_layers, mask_dilation)  # TODo check sizes
+        mask_head = MaskRCNNHeads(320, mask_layers, mask_dilation)  # TODo check sizes
 
         mask_predictor_in_channels = 256  # == mask_layers[-1]
         mask_dim_reduced = 256
@@ -68,11 +74,12 @@ class SegmentationModel(nn.Module):
 
     def forward(self, x, bboxes, targets=None):
         resnet_features = self.extract_resnet_features(x)  # TODO extend features of resnet 0s
+        resnet_features = torch.cat([torch.zeros_like(resnet_features[:8, :, :, :]), resnet_features, torch.zeros_like(resnet_features[:8, :, :, :])])
+        # resnet_features =
         # TODO this can actually be vectorized, but not sure if it is possible to do all at once do to memory constraints, shouldn't effect the outcome nonetheless
         all_features = []
 
-        for idx in range(4):  # len(x)):
-            idx = 10  # TODO delete this
+        for idx in range(8, len(resnet_features) - 7):
             # TODO modify this according to slowfast
             fast_features = self.fast_conv1(resnet_features[idx - 8:idx + 8].unsqueeze(0).transpose(1, 2))
             slow_features = self.slow_conv1(resnet_features[idx - 2:idx + 2].unsqueeze(0).transpose(1, 2))
@@ -81,7 +88,7 @@ class SegmentationModel(nn.Module):
 
         all_features = torch.cat(all_features)
         image_sizes = [tuple(x.shape[2:4])] * len(all_features)
-        roi_output = self.roi_head(all_features, bboxes[:4], image_sizes[:4], targets[:4])
+        output = self.roi_head(all_features[:4], bboxes[:4], image_sizes[:4], targets[:4])
         # TODO now like maskrcnn
         print('hi')
         pass

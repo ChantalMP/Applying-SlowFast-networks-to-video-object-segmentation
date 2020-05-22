@@ -51,7 +51,8 @@ def project_masks_on_boxes(gt_masks, boxes, M):
     boxes. This prepares the masks for them to be fed to the
     loss computation as the targets.
     """
-    rois = boxes
+    rois = torch.cat([torch.zeros_like(boxes)[:, :1], boxes],
+                     dim=1)  # TODO not sure at all about this, but we have to append something that corresponds to batch idx
     gt_masks = gt_masks[:, None].to(rois)
     return roi_align(gt_masks, rois, (M, M), 1.)[:, 0]
 
@@ -163,7 +164,7 @@ class RoIHeads(torch.nn.Module):
         # TODO convert maskproposal to correct roi format
         mask_features = self.mask_roi_pool(features, mask_proposals)
         mask_features = self.mask_head(mask_features)
-        mask_logits = self.mask_predictor(mask_features)
+        mask_logits = self.mask_predictor(mask_features)[:, 0, :, :]
         mask_loss = None
 
         loss_mask = {}
@@ -171,11 +172,10 @@ class RoIHeads(torch.nn.Module):
             assert targets is not None
             assert mask_logits is not None
 
-            gt_masks = [t["masks"] for t in targets]
-            gt_labels = [t["labels"] for t in targets]
+            gt_masks = [t for t in targets]
             rcnn_loss_mask = maskrcnn_loss(
                 mask_logits, mask_proposals,
-                gt_masks, gt_labels)
+                gt_masks)
             loss_mask = {
                 "loss_mask": rcnn_loss_mask
             }

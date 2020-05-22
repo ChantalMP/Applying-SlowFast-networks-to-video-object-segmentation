@@ -40,11 +40,15 @@ class DAVISDataset(Dataset):
             masks = []
             boxes = []
             for img, msk in zip(self.sequences[seq]['images'], self.sequences[seq]['masks']):
-                image = np.array(Image.open(img))
-                mask = np.array(Image.open(msk))
+                image = Image.open(img)
+                image.thumbnail((256, 256), Image.ANTIALIAS)  # Crop image to maximum 256
+                image = np.array(image)
+                mask = Image.open(msk)
+                mask.thumbnail((256, 256), Image.ANTIALIAS)
+                mask = np.array(mask)
                 imgs.append(image)
 
-                #get ids of the different objects in the img
+                # get ids of the different objects in the img
                 obj_ids = np.unique(mask)
                 # first id is the background, so remove it
                 obj_ids = obj_ids[1:]
@@ -63,8 +67,8 @@ class DAVISDataset(Dataset):
                     ymax = np.max(pos[0])
                     img_boxes.append(np.array([xmin, ymin, xmax, ymax]))
 
-                masks.append(torch.tensor(np.stack(img_masks)))
-                boxes.append(torch.tensor(np.stack(img_boxes)))
+                masks.append(torch.tensor(np.stack(img_masks), dtype=torch.float32))
+                boxes.append(torch.tensor(np.stack(img_boxes), dtype=torch.float32))
 
             self.data.append((imgs, masks, boxes))
 

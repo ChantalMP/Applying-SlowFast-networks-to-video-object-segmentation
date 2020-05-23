@@ -22,7 +22,7 @@ class DAVISDataset(Dataset):
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
-        sequences_names = [x.strip() for x in tmp][:1]
+        sequences_names = [x.strip() for x in tmp][1:2]
         self.sequences = defaultdict(dict)
 
         for seq in sequences_names:
@@ -41,10 +41,10 @@ class DAVISDataset(Dataset):
             boxes = []
             for img, msk in zip(self.sequences[seq]['images'], self.sequences[seq]['masks']):
                 image = Image.open(img)
-                image.thumbnail((256, 256), Image.ANTIALIAS)  # Crop image to maximum 256
+                image.thumbnail((300, 300), Image.ANTIALIAS)  # Crop image to maximum 256
                 image = np.array(image)
                 mask = Image.open(msk)
-                mask.thumbnail((256, 256), Image.ANTIALIAS)
+                mask.thumbnail((300, 300), Image.ANTIALIAS)
                 mask = np.array(mask)
                 imgs.append(image)
 
@@ -67,8 +67,8 @@ class DAVISDataset(Dataset):
                     ymax = np.max(pos[0])
                     img_boxes.append(np.array([xmin, ymin, xmax, ymax]))
 
-                masks.append(torch.tensor(np.stack(img_masks), dtype=torch.float32))
-                boxes.append(torch.tensor(np.stack(img_boxes), dtype=torch.float32))
+                masks.append(img_masks)
+                boxes.append(img_boxes)
 
             self.data.append((imgs, masks, boxes))
 

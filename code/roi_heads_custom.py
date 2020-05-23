@@ -6,6 +6,7 @@ from torch import Tensor
 from torchvision.ops import boxes as box_ops
 
 from torchvision.ops import roi_align
+from torchvision.ops._utils import convert_boxes_to_roi_format
 
 
 def maskrcnn_inference(x, labels):
@@ -52,7 +53,7 @@ def project_masks_on_boxes(gt_masks, boxes, M):
     loss computation as the targets.
     """
     rois = torch.cat([torch.zeros_like(boxes)[:, :1], boxes],
-                     dim=1)  # TODO not sure at all about this, but we have to append something that corresponds to batch idx
+                     dim=1)  # TODO not sure at all about this, but we have to append something that corresponds to batch idx, see convert_boxes_to_roi_format
     gt_masks = gt_masks[:, None].to(rois)
     return roi_align(gt_masks, rois, (M, M), 1.)[:, 0]
 
@@ -73,7 +74,9 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks):
         project_masks_on_boxes(m, p, discretization_size)
         for m, p in zip(gt_masks, proposals)
     ]
-
+    from matplotlib import pyplot as plt
+    plt.imshow(mask_targets[0][0].cpu().numpy())
+    plt.show()
     mask_targets = torch.cat(mask_targets, dim=0)
 
     # torch.mean (in binary_cross_entropy_with_logits) doesn't

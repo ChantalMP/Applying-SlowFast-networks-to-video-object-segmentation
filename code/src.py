@@ -37,10 +37,7 @@ def main():
     for seq in dataloader:  # TODO make sure this works
         imgs, masks, boxes = seq
         imgs = torch.stack(imgs)[:, 0, :, :].to(device)  # TODO decide if 0 should be first or second
-        masks = [elem[:, 0, :, :].to(device) for elem in masks]
-        boxes = [elem[:, 0, :].to(device) for elem in boxes]
         output = model(imgs, boxes, masks)
-        a = 1
     pass
 
 

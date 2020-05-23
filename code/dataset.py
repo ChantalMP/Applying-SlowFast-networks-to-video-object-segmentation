@@ -41,10 +41,10 @@ class DAVISDataset(Dataset):
             boxes = []
             for img, msk in zip(self.sequences[seq]['images'], self.sequences[seq]['masks']):
                 image = Image.open(img)
-                image.thumbnail((300, 300), Image.ANTIALIAS)  # Crop image to maximum 256
+                image.thumbnail((256, 256), Image.ANTIALIAS)  # Crop image to maximum 256
                 image = np.array(image)
                 mask = Image.open(msk)
-                mask.thumbnail((300, 300), Image.ANTIALIAS)
+                mask.thumbnail((256, 256), Image.ANTIALIAS)
                 mask = np.array(mask)
                 imgs.append(image)
 

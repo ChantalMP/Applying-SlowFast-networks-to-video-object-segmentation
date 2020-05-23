@@ -1,3 +1,4 @@
+from math import ceil
 import torch
 from torch import nn
 import torchvision.models as models
@@ -48,6 +49,8 @@ class SegmentationModel(nn.Module):
 
         self.roi_head = RoIHeads(mask_roi_pool=mask_roi_pool, mask_head=mask_head, mask_predictor=mask_predictor)
 
+        self.bs = 32
+
         # TODO lateral connection
         # TODO maskrcnn_loss supports discretinzation size (meaning they don't have to be the same size)
 
@@ -73,21 +76,35 @@ class SegmentationModel(nn.Module):
         # resnet_features =
         # TODO this can actually be vectorized, but not sure if it is possible to do all at once do to memory constraints, shouldn't effect the outcome nonetheless
         all_features = []
-        valid_features = []
+        all_valid_fast_resnet_features = []
+        all_valid_slow_resnet_features = []
         valid_features_mask = []
 
         for idx in range(8, len(resnet_features) - 8):
-            if len(bboxes[idx - 8]) == 0:
+            if len(bboxes[idx - 8]) == 0:  # If no box predictions just skip
                 valid_features_mask.append(0)
                 continue
             else:
                 valid_features_mask.append(1)
-            # TODO modify this according to slowfast\
-            # TODO instead of computing these, prepare them for batch creation at once
-            fast_features = self.fast_conv1(resnet_features[idx - 8:idx + 8].unsqueeze(0).transpose(1, 2))
-            slow_features = self.slow_conv1(resnet_features[idx - 2:idx + 2].unsqueeze(0).transpose(1, 2))
-            features = torch.cat([slow_features, fast_features], dim=1)[:, :, 0, :, :]
-            all_features.append(features)
+
+            fast_resnet_features = resnet_features[idx - 8:idx + 8].transpose(0, 1)
+            slow_resnet_features = resnet_features[idx - 2:idx + 2].transpose(0, 1)
+            all_valid_fast_resnet_features.append(fast_resnet_features)
+            all_valid_slow_resnet_features.append(slow_resnet_features)
+
+        # TODO modify this according to slowfast\
+        # TODO instead of computing these, prepare them for batch creation at once
+        # fast_features = self.fast_conv1(resnet_features[idx - 8:idx + 8].transpose(1, 2))
+        # slow_features = self.slow_conv1(resnet_features[idx - 2:idx + 2].unsqueeze(0).transpose(1, 2))
+        # features = torch.cat([slow_features, fast_features], dim=1)[:, :, 0, :, :]
+        # all_features.append(features)
+
+        for batch_idx in range(ceil(len(all_valid_slow_resnet_features) / self.bs)):
+            batch_slow_resnet_features = torch.stack(all_valid_slow_resnet_features[batch_idx * self.bs:batch_idx * self.bs + self.bs])
+            batch_fast_resnet_features = torch.stack(all_valid_fast_resnet_features[batch_idx * self.bs:batch_idx * self.bs + self.bs])
+            batch_slow_output_features = self.slow_conv1(ba)
+
+            a = 1
 
         all_features = torch.cat(all_features)
         image_sizes = [tuple(x.shape[2:4])] * len(all_features)

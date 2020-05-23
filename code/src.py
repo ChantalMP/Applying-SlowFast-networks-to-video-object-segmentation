@@ -24,6 +24,7 @@ from torch.utils.data import DataLoader
 from model import SegmentationModel
 import torch
 from torchvision.transforms import Compose, ToTensor
+from tqdm import tqdm
 
 
 def main():
@@ -31,13 +32,22 @@ def main():
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model = SegmentationModel(device=device)
+    model : SegmentationModel= SegmentationModel(device=device)
     model.to(device)
+    model.train()
+    opt = torch.optim.AdamW(params=model.parameters(), lr=1e-4)
+    epochs = 20
 
-    for seq in dataloader:  # TODO make sure this works
-        imgs, masks, boxes = seq
-        imgs = torch.stack(imgs)[:, 0, :, :].to(device)  # TODO decide if 0 should be first or second
-        output = model(imgs, boxes, masks)
+    for epoch in tqdm(range(epochs), total=epochs, desc="Epoch:"):
+        for seq in tqdm(dataloader, total=len(dataloader), desc="Sequence:"):
+            imgs, masks, boxes = seq
+            imgs = torch.stack(imgs)[:, 0, :, :].to(device)  # TODO decide if 0 should be first or second
+            loss = model(imgs, boxes, masks)
+            print(loss)
+            loss.backward()
+            opt.step()
+            opt.zero_grad()
+
     pass
 
 

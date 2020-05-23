@@ -74,9 +74,6 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks):
         project_masks_on_boxes(m, p, discretization_size)
         for m, p in zip(gt_masks, proposals)
     ]
-    from matplotlib import pyplot as plt
-    plt.imshow(mask_targets[0][0].cpu().numpy())
-    plt.show()
     mask_targets = torch.cat(mask_targets, dim=0)
 
     # torch.mean (in binary_cross_entropy_with_logits) doesn't
@@ -168,9 +165,7 @@ class RoIHeads(torch.nn.Module):
         mask_features = self.mask_roi_pool(features, mask_proposals)
         mask_features = self.mask_head(mask_features)
         mask_logits = self.mask_predictor(mask_features)[:, 0, :, :]
-        mask_loss = None
 
-        loss_mask = {}
         if self.training:
             assert targets is not None
             assert mask_logits is not None
@@ -179,13 +174,11 @@ class RoIHeads(torch.nn.Module):
             rcnn_loss_mask = maskrcnn_loss(
                 mask_logits, mask_proposals,
                 gt_masks)
-            loss_mask = {
-                "loss_mask": rcnn_loss_mask
-            }
+            return rcnn_loss_mask
         else:
             labels = [r["labels"] for r in result]
             masks_probs = maskrcnn_inference(mask_logits, labels)
             for mask_prob, r in zip(masks_probs, result):
                 r["masks"] = mask_prob
 
-        return result, loss_mask
+            return result

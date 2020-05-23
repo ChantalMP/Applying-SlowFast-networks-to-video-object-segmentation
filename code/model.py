@@ -75,9 +75,6 @@ class SegmentationModel(nn.Module):
 
         # resnet_features =
         # TODO this can actually be vectorized, but not sure if it is possible to do all at once do to memory constraints, shouldn't effect the outcome nonetheless
-        all_features = []
-        all_valid_fast_resnet_features = []
-        all_valid_slow_resnet_features = []
         valid_features_mask = []
 
         for idx in range(8, len(resnet_features) - 8):
@@ -87,40 +84,50 @@ class SegmentationModel(nn.Module):
             else:
                 valid_features_mask.append(1)
 
-            fast_resnet_features = resnet_features[idx - 8:idx + 8].transpose(0, 1)
-            slow_resnet_features = resnet_features[idx - 2:idx + 2].transpose(0, 1)
-            all_valid_fast_resnet_features.append(fast_resnet_features)
-            all_valid_slow_resnet_features.append(slow_resnet_features)
 
         # TODO modify this according to slowfast\
         # TODO instead of computing these, prepare them for batch creation at once
-        # fast_features = self.fast_conv1(resnet_features[idx - 8:idx + 8].transpose(1, 2))
-        # slow_features = self.slow_conv1(resnet_features[idx - 2:idx + 2].unsqueeze(0).transpose(1, 2))
-        # features = torch.cat([slow_features, fast_features], dim=1)[:, :, 0, :, :]
-        # all_features.append(features)
+        total_loss = 0.
+        pred_outputs = []
+        for batch_idx in range(ceil(len(x) / self.bs)):
+            feature_idxs = range(batch_idx*self.bs, min((batch_idx+1)*self.bs, len(x)))
+            slow_valid_features = []
+            fast_valid_features = []
+            batch_bboxes = []
+            batch_targets = []
+            for feature_idx in feature_idxs:
+                if valid_features_mask[feature_idx] == 1:
+                    resnet_feature_idx = feature_idx+8
+                    slow_valid_features.append(resnet_features[resnet_feature_idx - 2:resnet_feature_idx + 2].transpose(0, 1))
+                    fast_valid_features.append(resnet_features[resnet_feature_idx - 8:resnet_feature_idx + 8].transpose(0, 1))
 
-        for batch_idx in range(ceil(len(all_valid_slow_resnet_features) / self.bs)):
-            batch_slow_resnet_features = torch.stack(all_valid_slow_resnet_features[batch_idx * self.bs:batch_idx * self.bs + self.bs])
-            batch_fast_resnet_features = torch.stack(all_valid_fast_resnet_features[batch_idx * self.bs:batch_idx * self.bs + self.bs])
-            batch_slow_output_features = self.slow_conv1(ba)
+                    batch_bboxes.append(torch.cat(bboxes[feature_idx]).float().to(device=self.device))
+                    batch_targets.append(torch.cat(targets[feature_idx]).float().to(device=self.device))
 
-            a = 1
+            if len(slow_valid_features) == 0: # If no detections in batch, skip
+                continue
+            batch_slow_output_features = self.slow_conv1(torch.stack(slow_valid_features))
+            batch_fast_output_features = self.fast_conv1(torch.stack(fast_valid_features))
 
-        all_features = torch.cat(all_features)
-        image_sizes = [tuple(x.shape[2:4])] * len(all_features)
-        bboxes = [torch.cat(elem).float().to(self.device) for idx, elem in enumerate(bboxes) if valid_features_mask[idx]]
-        targets = [torch.cat(elem).float().to(self.device) for idx, elem in enumerate(targets) if valid_features_mask[idx]]
-        output = self.roi_head(all_features[:4], bboxes[:4], image_sizes[:4], targets[:4])
-        full_output = []
-        out_idx = 0
-        for valid in valid_features_mask:
-            if valid:
-                full_output.append(output[out_idx])
-                out_idx += 1
+            merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features], dim=1)[:, :, 0, :, :]
+
+            image_sizes = [tuple(x.shape[2:4])] * len(merged_features)
+            if self.training:
+                total_loss += self.roi_head(merged_features, batch_bboxes, image_sizes, batch_targets)
             else:
-                full_output.append(torch.zeros_like(output[0]))
-        pass
+                pass
 
+        if self.training:
+            return total_loss
+        else:
+            full_output = []
+            out_idx = 0
+            for valid in valid_features_mask:
+                if valid:
+                    full_output.append(pred_outputs[out_idx])
+                    out_idx += 1
+                else:
+                    full_output.append(torch.zeros_like(pred_outputs[0]))
 
 if __name__ == '__main__':
     # TODO consider normalization? Values between 0 and 1?

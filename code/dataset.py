@@ -78,8 +78,11 @@ class DAVISDataset(Dataset):
     def __getitem__(self, i):
         imgs, masks, boxes = self.data[i]
         if self.transforms:
-            for i in range(len(imgs)):
-                imgs[i] = self.transforms(imgs[i])
+            transformed_imgs = []
+            for img in imgs:
+                transformed_imgs.append(self.transforms(img))
+
+            return transformed_imgs, masks, boxes
 
         return imgs, masks, boxes
 

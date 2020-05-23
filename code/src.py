@@ -35,12 +35,20 @@ def main():
     model : SegmentationModel= SegmentationModel(device=device)
     model.to(device)
     model.train()
+
+    import numpy as np
+    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
+    print(f'{params:,}')
     opt = torch.optim.AdamW(params=model.parameters(), lr=1e-4)
-    epochs = 20
+    epochs = 40
 
     for epoch in tqdm(range(epochs), total=epochs, desc="Epoch:"):
         for seq in tqdm(dataloader, total=len(dataloader), desc="Sequence:"):
             imgs, masks, boxes = seq
+            imgs = imgs[0:1] * len(imgs)
+            boxes = boxes[0:1] * len(boxes)
+            masks = masks[0:1] * len(masks)
             imgs = torch.stack(imgs)[:, 0, :, :].to(device)  # TODO decide if 0 should be first or second
             loss = model(imgs, boxes, masks)
             print(loss)
@@ -48,7 +56,7 @@ def main():
             opt.step()
             opt.zero_grad()
 
-    pass
+    torch.save(model.state_dict(), "models/model_overfit.pth")
 
 
 if __name__ == '__main__':

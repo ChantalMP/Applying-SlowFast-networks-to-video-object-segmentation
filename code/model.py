@@ -115,7 +115,7 @@ class SegmentationModel(nn.Module):
             if self.training:
                 total_loss += self.roi_head(merged_features, batch_bboxes, image_sizes, batch_targets)
             else:
-                pass
+                pred_outputs.append(self.roi_head(merged_features, batch_bboxes, image_sizes, batch_targets))
 
         if self.training:
             return total_loss

@@ -7,9 +7,9 @@ from tqdm import tqdm
 from matplotlib import pyplot as plt
 import numpy as np
 from PIL import Image
+from utils import convert_mask_pred_to_ground_truth_format,intersection_over_union
 
-
-def predict():
+def predict_and_visualize():
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=1)
@@ -22,39 +22,36 @@ def predict():
 
     for seq in tqdm(dataloader, total=len(dataloader), desc="Sequence:"):
         preds = []
-        imgs, masks, boxes = seq
+        imgs, gt_masks, boxes = seq
         imgs = torch.cat(imgs).to(device)
         with torch.no_grad():
-            preds.extend(model(imgs, boxes, masks))
+            preds.extend(model(imgs, boxes, gt_masks))
 
         mask_idx = 0
-        for img_idx, img_boxes in enumerate(boxes):
-            img = imgs[img_idx]
+        for img_idx, (img_boxes, img_gt_masks) in enumerate(zip(boxes, gt_masks)):
+            img = imgs[img_idx].cpu().numpy().transpose(1,2,0)
             ax = plt.subplot(1, 1, 1)
             ax.set_axis_off()
-            ax.set_xlim(0,img.shape[2])
-            ax.set_ylim(img.shape[1],0)
-            ax.imshow(img.cpu().numpy().transpose(1,2,0))
-            for box in img_boxes:
+            ax.imshow(img)
+            for box, gt_mask in zip(img_boxes, img_gt_masks): # Wont work when not using gt_boxes because we can have less boxes than masks
                 box = box[0].tolist()
                 mask = preds[mask_idx].cpu().numpy().astype(np.float)
+                full_mask = convert_mask_pred_to_ground_truth_format(img=img,box=box,mask=mask,threshold=0.5)
 
-                # resize mask
-                mask_plot = Image.fromarray(mask)
-                mask_plot = np.array(mask_plot.resize((256, 256), resample=Image.ANTIALIAS))
-                #theshold mask
-                mask_plot = (mask_plot >= 0.5).astype(float)
+                print(f'IoU: {intersection_over_union(gt_mask[0].numpy(),full_mask):.4f}')
 
-                mask_plot = np.expand_dims(mask_plot, axis=-1).repeat(4, axis=-1)
-                mask_plot[:,:,0] = 0.
-                mask_plot[:,:,1] = 1
-                mask_plot[:,:,2] = 0
+                full_mask = np.expand_dims(gt_mask[0].numpy().astype(np.float), axis=-1).repeat(4, axis=-1)
+                full_mask[:,:,0] = 0.
+                full_mask[:,:,1] = 1
+                full_mask[:,:,2] = 0.
 
                 mask_idx +=1
-                ax.imshow(mask_plot, alpha=0.3, extent=(box[0], box[2], box[3], box[1]), interpolation='antialiased')
+                ax.imshow(full_mask, alpha=0.3)
+
             plt.show()
+            a = 1
 
     pass
 
 if __name__ == '__main__':
-    predict()
+    predict_and_visualize()

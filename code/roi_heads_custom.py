@@ -180,7 +180,4 @@ class RoIHeads(torch.nn.Module):
                 gt_masks)
             return rcnn_loss_mask
         else:
-            from matplotlib import pyplot as plt
-            plt.imshow(mask_logits[0].cpu().numpy())
-            plt.show()
-            return mask_logits
+            return mask_logits.sigmoid()

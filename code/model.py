@@ -73,8 +73,6 @@ class SegmentationModel(nn.Module):
         resnet_features = torch.cat([torch.zeros_like(resnet_features[:8, :, :, :]), resnet_features, torch.zeros_like(resnet_features[:8, :, :, :])])
         # 0 0 0 0 X X X X 0 0 0 0
 
-        # resnet_features =
-        # TODO this can actually be vectorized, but not sure if it is possible to do all at once do to memory constraints, shouldn't effect the outcome nonetheless
         valid_features_mask = []
 
         for idx in range(8, len(resnet_features) - 8):
@@ -120,14 +118,7 @@ class SegmentationModel(nn.Module):
         if self.training:
             return total_loss
         else:
-            full_output = []
-            out_idx = 0
-            for valid in valid_features_mask:
-                if valid:
-                    full_output.append(pred_outputs[out_idx])
-                    out_idx += 1
-                else:
-                    full_output.append(torch.zeros_like(pred_outputs[0]))
+            return torch.cat(pred_outputs)
 
 if __name__ == '__main__':
     # TODO consider normalization? Values between 0 and 1?

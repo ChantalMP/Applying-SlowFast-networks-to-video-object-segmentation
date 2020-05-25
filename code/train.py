@@ -25,36 +25,49 @@ from model import SegmentationModel
 import torch
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
+from helpers.evaluation import evaluate
 
 
 def main():
+    epochs = 40
+    lr = 1e-4
+    logging_frequency = 10
+
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model : SegmentationModel= SegmentationModel(device=device)
+    model: SegmentationModel = SegmentationModel(device=device)
     model.to(device)
     model.train()
+    # TODO integrate tensorboard
 
-    import numpy as np
-    model_parameters = filter(lambda p: p.requires_grad, model.parameters())
-    params = sum([np.prod(p.size()) for p in model_parameters])
-    print(f'{params:,}')
-    opt = torch.optim.AdamW(params=model.parameters(), lr=1e-4)
-    epochs = 40
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'{total_params:,} total parameters.')
+    total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f'{total_trainable_params:,} training parameters.')
+
+    opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
 
     for epoch in tqdm(range(epochs), total=epochs, desc="Epoch:"):
-        for seq in tqdm(dataloader, total=len(dataloader), desc="Sequence:"):
-            imgs, masks, boxes = seq
-            imgs = imgs[0:1] * len(imgs)
-            boxes = boxes[0:1] * len(boxes)
-            masks = masks[0:1] * len(masks)
-            imgs = torch.stack(imgs)[:, 0, :, :].to(device)  # TODO decide if 0 should be first or second
-            loss = model(imgs, boxes, masks)
-            print(loss)
+        total_loss = 0.
+        count = 0
+        for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequence:"):
+            model.train()
+            imgs, gt_masks, boxes = seq
+            imgs = torch.cat(imgs).to(device)
+            loss = model(imgs, boxes, gt_masks)
+            total_loss += loss.item()
+            count += imgs.shape[0]
             loss.backward()
             opt.step()
             opt.zero_grad()
+
+            if idx % logging_frequency == 0:
+                print(f'\nLoss: {total_loss / count}\n')
+                total_loss = 0
+
+                evaluate(model, device)
 
     torch.save(model.state_dict(), "models/model_overfit_efficientnet.pth")
 

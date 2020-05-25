@@ -81,11 +81,6 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks):
     if mask_targets.numel() == 0:
         return mask_logits.sum() * 0
 
-    from matplotlib import pyplot as plt
-    plt.imshow(mask_targets[0].cpu().numpy(),cmap='Greys')
-    plt.show()
-    plt.imshow(mask_logits[0].sigmoid().detach().cpu().numpy(),cmap='Greys')
-    plt.show()
     # TODO make sure to use correct prososal_mask to correct gt_mask
     mask_loss = F.binary_cross_entropy_with_logits(mask_logits, mask_targets)
     return mask_loss
@@ -170,14 +165,26 @@ class RoIHeads(torch.nn.Module):
         mask_features = self.mask_head(mask_features)
         mask_logits = self.mask_predictor(mask_features)[:, 0, :, :]
 
+        if targets is not None:
+            gt_masks = [t for t in targets]
+        else:
+            gt_masks = None
+
         if self.training:
             assert targets is not None
             assert mask_logits is not None
 
-            gt_masks = [t for t in targets]
             rcnn_loss_mask = maskrcnn_loss(
                 mask_logits, mask_proposals,
                 gt_masks)
             return rcnn_loss_mask
         else:
-            return mask_logits.sigmoid()
+            if gt_masks is not None:
+                rcnn_loss_mask = maskrcnn_loss(
+                    mask_logits, mask_proposals,
+                    gt_masks)
+
+                return rcnn_loss_mask, mask_logits.sigmoid()
+
+            else:
+                return mask_logits.sigmoid()

@@ -16,8 +16,8 @@ class SegmentationModel(nn.Module):
         super(SegmentationModel, self).__init__()
         self.device = device
 
-        self.resnet = models.resnet18(pretrained=True)
-        self.resnet.layer3._modules['0'].conv1.stride = (1, 1)
+        self.resnet = models.resnet18(pretrained=True)  # TODO replace with efficiennet https://github.com/lukemelas/EfficientNet-PyTorch
+        self.resnet.layer3._modules['0'].conv1.stride = (1, 1)  # TODO decide if this fix is actually helping or hurting
         self.resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
         self.resnet.layer4._modules['0'].conv1.stride = (1, 1)
         self.resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling

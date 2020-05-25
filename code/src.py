@@ -56,7 +56,7 @@ def main():
             opt.step()
             opt.zero_grad()
 
-    torch.save(model.state_dict(), "models/model_overfit.pth")
+    torch.save(model.state_dict(), "models/model_overfit_efficientnet.pth")
 
 
 if __name__ == '__main__':

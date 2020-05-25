@@ -17,7 +17,7 @@ def predict_and_visualize():
     model: SegmentationModel = SegmentationModel(device=device)
     model.to(device)
     model.eval()
-    model.load_state_dict(torch.load("models/model_overfit.pth"))
+    model.load_state_dict(torch.load("models/model_overfit_efficientnet.pth"))
 
 
     for seq in tqdm(dataloader, total=len(dataloader), desc="Sequence:"):
@@ -38,9 +38,9 @@ def predict_and_visualize():
                 mask = preds[mask_idx].cpu().numpy().astype(np.float)
                 full_mask = convert_mask_pred_to_ground_truth_format(img=img,box=box,mask=mask,threshold=0.5)
 
-                print(f'IoU: {intersection_over_union(gt_mask[0].numpy(),full_mask):.4f}')
+                print(f'IoU: {intersection_over_union(full_mask.numpy(),full_mask):.4f}')
 
-                full_mask = np.expand_dims(gt_mask[0].numpy().astype(np.float), axis=-1).repeat(4, axis=-1)
+                full_mask = np.expand_dims(full_mask.numpy().astype(np.float), axis=-1).repeat(4, axis=-1)
                 full_mask[:,:,0] = 0.
                 full_mask[:,:,1] = 1
                 full_mask[:,:,2] = 0.

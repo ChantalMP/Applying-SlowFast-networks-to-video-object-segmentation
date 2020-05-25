@@ -1,11 +1,10 @@
 from math import ceil
 import torch
 from torch import nn
-import torchvision.models as models
-from torchvision.transforms import ToTensor
 from roi_heads_custom import RoIHeads
 from torchvision.ops import RoIAlign
 from torchvision.models.detection.mask_rcnn import MaskRCNNHeads, MaskRCNNPredictor
+from efficientnet_pytorch import EfficientNet
 
 
 # TODO consider how to merge slow and fast, also consider regular lateral connections if necessary
@@ -16,19 +15,23 @@ class SegmentationModel(nn.Module):
         super(SegmentationModel, self).__init__()
         self.device = device
 
-        self.resnet = models.resnet18(pretrained=True)  # TODO replace with efficiennet https://github.com/lukemelas/EfficientNet-PyTorch
-        self.resnet.layer3._modules['0'].conv1.stride = (1, 1)  # TODO decide if this fix is actually helping or hurting
-        self.resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
-        self.resnet.layer4._modules['0'].conv1.stride = (1, 1)
-        self.resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
+        # self.resnet = models.resnet18(pretrained=True)  # TODO replace with efficiennet https://github.com/lukemelas/EfficientNet-PyTorch
+        # self.resnet.layer3._modules['0'].conv1.stride = (1, 1)  # TODO decide if this fix is actually helping or hurting
+        # self.resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
+        # self.resnet.layer4._modules['0'].conv1.stride = (1, 1)
+        # self.resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
+
+        self.efficient_net = EfficientNet.from_pretrained('efficientnet-b0')
+        self.efficient_net._blocks._modules['5']._depthwise_conv.stride = [1, 1]
+        self.efficient_net._blocks._modules['11']._depthwise_conv.stride = [1, 1]
 
         self.fast_conv1 = nn.Conv3d(
-            in_channels=512,
+            in_channels=1280,
             out_channels=64,
             kernel_size=(16, 3, 3))  # TODO consider padding
 
         self.slow_conv1 = nn.Conv3d(
-            in_channels=512,
+            in_channels=1280,
             out_channels=256,
             kernel_size=(4, 3, 3)  # TODO consider padding
             # TODO first version is without stride but with smaller kernel
@@ -68,14 +71,23 @@ class SegmentationModel(nn.Module):
         x = resnet.layer4(x)
         return x
 
+    def extract_efficient_net_features(self, x):
+        efficient_net = self.efficient_net
+        """ Calls extract_features to extract features, applies final linear layer, and returns logits. """
+        bs = x.size(0)
+        # Convolution layers
+        x = efficient_net.extract_features(x)
+        return x
+
     def forward(self, x, bboxes, targets=None):
-        resnet_features = self.extract_resnet_features(x)  # TODO extend features of resnet 0s
-        resnet_features = torch.cat([torch.zeros_like(resnet_features[:8, :, :, :]), resnet_features, torch.zeros_like(resnet_features[:8, :, :, :])])
+        #image_features = self.extract_resnet_features(x)
+        image_features = self.extract_efficient_net_features(x)
+        image_features = torch.cat([torch.zeros_like(image_features[:1, :, :, :].repeat(8,1,1,1)), image_features, torch.zeros_like(image_features[:1, :, :, :].repeat(8,1,1,1))])
         # 0 0 0 0 X X X X 0 0 0 0
 
         valid_features_mask = []
 
-        for idx in range(8, len(resnet_features) - 8):
+        for idx in range(8, len(image_features) - 8):
             if len(bboxes[idx - 8]) == 0:  # If no box predictions just skip
                 valid_features_mask.append(0)
                 continue
@@ -95,9 +107,9 @@ class SegmentationModel(nn.Module):
             batch_targets = []
             for feature_idx in feature_idxs:
                 if valid_features_mask[feature_idx] == 1:
-                    resnet_feature_idx = feature_idx+8
-                    slow_valid_features.append(resnet_features[resnet_feature_idx - 2:resnet_feature_idx + 2].transpose(0, 1))
-                    fast_valid_features.append(resnet_features[resnet_feature_idx - 8:resnet_feature_idx + 8].transpose(0, 1))
+                    image_feature_idx = feature_idx+8
+                    slow_valid_features.append(image_features[image_feature_idx - 2:image_feature_idx + 2].transpose(0, 1))
+                    fast_valid_features.append(image_features[image_feature_idx - 8:image_feature_idx + 8].transpose(0, 1))
 
                     batch_bboxes.append(torch.cat(bboxes[feature_idx]).float().to(device=self.device))
                     batch_targets.append(torch.cat(targets[feature_idx]).float().to(device=self.device))

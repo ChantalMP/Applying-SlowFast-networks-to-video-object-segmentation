@@ -21,7 +21,7 @@
 # Slow rate of fast how is it etc etc.
 from dataset import DAVISDataset
 from torch.utils.data import DataLoader
-from model_2 import SegmentationModel
+from model import SegmentationModel
 import torch
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
@@ -29,7 +29,7 @@ from helpers.evaluation import evaluate
 
 
 def main():
-    epochs = 40
+    epochs = 40*80
     lr = 1e-4
     logging_frequency = 10
 
@@ -69,7 +69,7 @@ def main():
 
                 evaluate(model, device)
 
-    torch.save(model.state_dict(), "models/model_overfit.pth")
+    torch.save(model.state_dict(), "models/model_overfit_efficientnet_original.pth")
 
 
 if __name__ == '__main__':

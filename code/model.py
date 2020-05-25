@@ -5,6 +5,7 @@ from roi_heads_custom import RoIHeads
 from torchvision.ops import RoIAlign
 from torchvision.models.detection.mask_rcnn import MaskRCNNHeads, MaskRCNNPredictor
 from efficientnet_pytorch import EfficientNet
+from torchvision import models
 
 
 # TODO consider how to merge slow and fast, also consider regular lateral connections if necessary
@@ -15,18 +16,18 @@ class SegmentationModel(nn.Module):
         super(SegmentationModel, self).__init__()
         self.device = device
 
-        # self.resnet = models.resnet18(pretrained=True)  # TODO replace with efficiennet https://github.com/lukemelas/EfficientNet-PyTorch
+        # self.resnet = models.resnet18(pretrained=True)
         # self.resnet.layer3._modules['0'].conv1.stride = (1, 1)  # TODO decide if this fix is actually helping or hurting
         # self.resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
         # self.resnet.layer4._modules['0'].conv1.stride = (1, 1)
         # self.resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
 
-        self.efficient_net = EfficientNet.from_pretrained('efficientnet-b0')
-        self.efficient_net._blocks._modules['5']._depthwise_conv.stride = [1, 1]
-        self.efficient_net._blocks._modules['11']._depthwise_conv.stride = [1, 1]
+        self.efficient_net = EfficientNet.from_pretrained('efficientnet-b0') #TODO use gen-efficientnet repository
+        #self.efficient_net._blocks._modules['5']._depthwise_conv.stride = [1, 1]
+        #self.efficient_net._blocks._modules['11']._depthwise_conv.stride = [1, 1]
 
         self.fast_conv1 = nn.Conv3d(
-            in_channels=1280,
+            in_channels=1280, #1280 for efficientnet, 512 for resnet
             out_channels=64,
             kernel_size=(16, 3, 3))  # TODO consider padding
 
@@ -125,12 +126,21 @@ class SegmentationModel(nn.Module):
             if self.training:
                 total_loss += self.roi_head(merged_features, batch_bboxes, image_sizes, batch_targets)
             else:
-                pred_outputs.append(self.roi_head(merged_features, batch_bboxes, image_sizes, batch_targets))
+                if targets is not None:
+                    loss, output = self.roi_head(merged_features, batch_bboxes, image_sizes, batch_targets)
+
+                    total_loss += loss
+                    pred_outputs.append(output)
+                else:
+                    output = self.roi_head(merged_features, batch_bboxes, image_sizes, batch_targets)
+                    total_loss = -1
+                    pred_outputs.append(output)
 
         if self.training:
             return total_loss
         else:
-            return torch.cat(pred_outputs)
+            return total_loss, torch.cat(pred_outputs)
+
 
 if __name__ == '__main__':
     # TODO consider normalization? Values between 0 and 1?

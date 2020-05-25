@@ -29,7 +29,7 @@ from helpers.evaluation import evaluate
 
 
 def main():
-    epochs = 40
+    epochs = 40*80
     lr = 1e-4
     logging_frequency = 10
 
@@ -69,7 +69,7 @@ def main():
 
                 evaluate(model, device)
 
-    torch.save(model.state_dict(), "models/model_overfit_efficientnet.pth")
+    torch.save(model.state_dict(), "models/model_overfit_efficientnet_original.pth")
 
 
 if __name__ == '__main__':

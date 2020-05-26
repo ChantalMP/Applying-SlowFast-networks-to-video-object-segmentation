@@ -7,9 +7,6 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNHeads, MaskRCNNPredic
 from efficientnet_pytorch import EfficientNet
 from torchvision import models
 
-
-# TODO consider how to merge slow and fast, also consider regular lateral connections if necessary
-
 class FeatureExtractor(nn.Module):
     def __init__(self, name='resnet_50'):
         super(FeatureExtractor, self).__init__()
@@ -85,43 +82,47 @@ class FeatureExtractor(nn.Module):
 
 class SlowFastLayers(nn.Module):
     def __init__(self, input_size):
-        # TODO consider padding
+        # TODO consider no padding
         super(SlowFastLayers, self).__init__()
         self.fast_conv1 = nn.Conv3d(
             in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
             out_channels=32,
-            kernel_size=(8, 3, 3))
+            kernel_size=(8, 3, 3),
+            padding=(0, 1, 1))
 
         self.slow_conv1 = nn.Conv3d(
             in_channels=input_size,
             out_channels=256,
-            kernel_size=(2, 3, 3))  # TODO consider padding
-            # TODO first version is without stride but with smaller kernel
+            kernel_size=(2, 3, 3),
+            padding=(0, 1, 1))
+        # TODO maybe with stride
 
         self.fast_conv2 = nn.Conv3d(
-            in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
+            in_channels=32,
             out_channels=64,
-            kernel_size=(16, 3, 3))
+            kernel_size=(9, 3, 3),
+            padding=(0, 1, 1))
 
         self.slow_conv2 = nn.Conv3d(
-            in_channels=input_size,
-            out_channels=256,
-            kernel_size=(4, 3, 3)
+            in_channels=320,
+            out_channels=512,
+            kernel_size=(3, 3, 3),
+            padding=(0, 1, 1)
         )
 
-        # self.conv_f2s = nn.Conv3d(
-        #     dim_in,
-        #     dim_in * fusion_conv_channel_ratio,
-        #     kernel_size=[fusion_kernel, 1, 1],
-        #     stride=[alpha, 1, 1],
-        #     padding=[fusion_kernel // 2, 0, 0],
-        #     bias=False,
-        # )
+        self.conv_f2s = nn.Conv3d(
+            32,
+            64,
+            kernel_size=[3, 1, 1],
+            stride=[3, 1, 1],
+            padding=[0, 0, 0],
+            bias=False,
+        )
 
         self.relu = nn.ReLU(inplace=True)
 
     def fuse(self, slow, fast):
-        fuse = self.conv_f2s(fast) #TODO how does this work
+        fuse = self.conv_f2s(fast)
         # TODO maybe batchnorm
         fuse = self.relu(fuse)
         x_s_fuse = torch.cat([slow, fuse], 1)
@@ -152,21 +153,20 @@ class SlowFastLayers(nn.Module):
         return slow, fast
 
 class SegmentationModel(nn.Module):
-    def __init__(self, device):
+    def __init__(self, device, slow_pathway_size, fast_pathway_size):
         super(SegmentationModel, self).__init__()
         self.device = device
-        self.feature_extractor = FeatureExtractor(name='efficientnet-b0')
+        self.feature_extractor = FeatureExtractor(name='resnet_50')
+        self.slow_pathway_size = slow_pathway_size
+        self.fast_pathway_size = fast_pathway_size
 
         self.slow_fast = SlowFastLayers(self.feature_extractor.output_size)
-
-        # TODO: Unlike Track-RCNN, we can't have both of these convs set to identity from the start as identity kernel by definition requires in_channels==out_channels
-        # TODO: But maybe we can still use that trick for the slow path
 
         mask_roi_pool = RoIAlign(output_size=14, spatial_scale=0.11, sampling_ratio=2)  # Can be checked again to make sure spatial_scale is correct
 
         mask_layers = (256, 256, 256, 256)
         mask_dilation = 1
-        mask_head = MaskRCNNHeads(320, mask_layers, mask_dilation)
+        mask_head = MaskRCNNHeads(576, mask_layers, mask_dilation)
 
         mask_predictor_in_channels = 256  # == mask_layers[-1]
         mask_dim_reduced = 256
@@ -175,40 +175,49 @@ class SegmentationModel(nn.Module):
 
         self.roi_head = RoIHeads(mask_roi_pool=mask_roi_pool, mask_head=mask_head, mask_predictor=mask_predictor)
 
-        self.bs = 32
-        # TODO lateral connection
-        # TODO maskrcnn_loss supports discretinzation size (meaning they don't have to be the same size)
+        self.bs = 16
 
-    def forward(self, x, bboxes, targets=None):
+    def forward(self, x, bboxes, targets=None, padding=None):
+        overlap = self.fast_pathway_size // 2
+        # padding is a tuple like (False,False) first one indicates need to append before the sequence, second one after the sequence
         image_features = self.feature_extractor(x)
-        image_features = torch.cat([torch.zeros_like(image_features[:1, :, :, :].repeat(8, 1, 1, 1)), image_features,
-                                    torch.zeros_like(image_features[:1, :, :, :].repeat(8, 1, 1, 1))])
+        if padding is not None:
+            if padding[0].item():
+                image_features = torch.cat(
+                    [torch.zeros_like(image_features[:1, :, :, :].repeat(overlap, 1, 1, 1)), image_features])
+
+            if padding[1].item():
+                image_features = torch.cat(
+                    [image_features, torch.zeros_like(image_features[:1, :, :, :].repeat(overlap, 1, 1, 1))])
         # 0 0 0 0 X X X X 0 0 0 0
 
         valid_features_mask = []
 
-        for idx in range(8, len(image_features) - 8):
-            if len(bboxes[idx - 8]) == 0:  # If no box predictions just skip
+        for idx in range(overlap, len(image_features) - overlap):
+            if len(bboxes[idx - overlap]) == 0:  # If no box predictions just skip
                 valid_features_mask.append(0)
                 continue
             else:
                 valid_features_mask.append(1)
 
-        # TODO modify this according to slowfast\
-        # TODO instead of computing these, prepare them for batch creation at once
         total_loss = 0.
         pred_outputs = []
-        for batch_idx in range(ceil(len(x) / self.bs)):
-            feature_idxs = range(batch_idx * self.bs, min((batch_idx + 1) * self.bs, len(x)))
+        for batch_idx in range(ceil(len(valid_features_mask) / self.bs)):
+            feature_idxs = range(batch_idx * self.bs, min((batch_idx + 1) * self.bs, len(valid_features_mask)))
             slow_valid_features = []
             fast_valid_features = []
             batch_bboxes = []
             batch_targets = []
             for feature_idx in feature_idxs:
                 if valid_features_mask[feature_idx] == 1:
-                    image_feature_idx = feature_idx + 8
-                    slow_valid_features.append(image_features[image_feature_idx - 2:image_feature_idx + 2].transpose(0, 1))
-                    fast_valid_features.append(image_features[image_feature_idx - 8:image_feature_idx + 8].transpose(0, 1))
+                    image_feature_idx = feature_idx + overlap
+                    # TODO right now slow sees the middle 4 frames, we should consider the option of seeing 4 frames through skipping
+                    slow_valid_features.append(image_features[
+                                               image_feature_idx - self.slow_pathway_size // 2:image_feature_idx + self.slow_pathway_size // 2].transpose(
+                        0, 1))
+                    fast_valid_features.append(image_features[
+                                               image_feature_idx - self.fast_pathway_size // 2:image_feature_idx + self.fast_pathway_size // 2].transpose(
+                        0, 1))
 
                     batch_bboxes.append(torch.cat(bboxes[feature_idx]).float().to(device=self.device))
                     batch_targets.append(torch.cat(targets[feature_idx]).float().to(device=self.device))

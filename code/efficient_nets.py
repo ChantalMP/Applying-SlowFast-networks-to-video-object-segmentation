@@ -64,7 +64,7 @@ def run_model_config(name):
         resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)
         resnet.layer4._modules['0'].conv2.stride = (1, 1)
         resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)
-        # self.resnet.layer3._modules['0'].conv1.stride = (1, 1)  # TODO decide if this fix is actually helping or hurting
+        # self.resnet.layer3._modules['0'].conv1.stride = (1, 1)
         # self.resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
         # self.resnet.layer4._modules['0'].conv1.stride = (1, 1)
         # self.resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
@@ -84,6 +84,6 @@ def run_model_config(name):
 
 if __name__ == '__main__':
     run_model_config('resnet_50')
-    # TODO resnet both takes less space and is faster than efficient net
+    # resnet both takes less space and is faster than efficient net
 
     a = 1

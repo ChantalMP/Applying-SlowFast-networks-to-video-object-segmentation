@@ -1,4 +1,3 @@
-# TODO
 # Dataset and Dataloader (support video) for Davis 2017 (compute bounding boxes from mask data)
 # Dataloader returns one video as sequences of frames with corresponding masks (resize frames to a certain dimension (maybe 224 or 256)) decide on size
 # Model Pipeline: model is called with a sequence of frames(complete video).
@@ -30,18 +29,21 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 def main():
-    epochs = 40
+    epochs = 40 * 80
     lr = 1e-4
     logging_frequency = 10
+    slow_pathway_size = 4
+    fast_pathway_size = 16
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=60,
+                           fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model: SegmentationModel = SegmentationModel(device=device)
+    model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
+                                                 fast_pathway_size=fast_pathway_size)
     model.to(device)
     model.train()
-    # TODO integrate tensorboard
 
     total_params = sum(p.numel() for p in model.parameters())
     print(f'{total_params:,} total parameters.')
@@ -57,9 +59,9 @@ def main():
         count = 0
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequence:"):
             model.train()
-            imgs, gt_masks, boxes = seq
+            imgs, gt_masks, boxes, padding = seq
             imgs = torch.cat(imgs).to(device)
-            loss = model(imgs, boxes, gt_masks)
+            loss = model(imgs, boxes, gt_masks, padding)
             total_loss += loss.item()
             count += imgs.shape[0]
             loss.backward()
@@ -73,7 +75,7 @@ def main():
                 writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
                 total_loss = 0
 
-                evaluate(model, device, writer=writer, global_step=global_step)
+                # evaluate(model, device, writer=writer, global_step=global_step)
 
     torch.save(model.state_dict(), "models/model_overfit_resnet50_middle.pth")
 

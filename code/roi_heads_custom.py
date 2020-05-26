@@ -35,7 +35,6 @@ def maskrcnn_inference(x, labels):
     mask_prob = mask_prob[index, labels][:, None]
 
     if len(boxes_per_image) == 1:
-        # TODO : remove when dynamic split supported in ONNX
         # and remove assignment to mask_prob_list, just assign to mask_prob
         mask_prob_list = [mask_prob]
     else:
@@ -53,7 +52,7 @@ def project_masks_on_boxes(gt_masks, boxes, M):
     loss computation as the targets.
     """
     rois = torch.cat([torch.zeros_like(boxes)[:, :1], boxes],
-                     dim=1)  # TODO not sure at all about this, but we have to append something that corresponds to batch idx, see convert_boxes_to_roi_format
+                     dim=1)  # we append something that corresponds to batch idx, see convert_boxes_to_roi_format
     gt_masks = gt_masks[:, None].to(rois)
     return roi_align(gt_masks, rois, (M, M), 1.)[:, 0]
 
@@ -160,7 +159,6 @@ class RoIHeads(torch.nn.Module):
             targets (List[Dict])
         """
 
-        # TODO convert maskproposal to correct roi format
         mask_features = self.mask_roi_pool(features, mask_proposals)
         mask_features = self.mask_head(mask_features)
         mask_logits = self.mask_predictor(mask_features)[:, 0, :, :]

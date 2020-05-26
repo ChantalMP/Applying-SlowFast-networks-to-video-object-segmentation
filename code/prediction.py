@@ -10,11 +10,14 @@ from PIL import Image
 from utils import convert_mask_pred_to_ground_truth_format,intersection_over_union
 
 def predict_and_visualize():
+    slow_pathway_size = 4
+    fast_pathway_size = 16
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-    model: SegmentationModel = SegmentationModel(device=device)
+    model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
+                                                 fast_pathway_size=fast_pathway_size)
     model.to(device)
     model.eval()
     model.load_state_dict(torch.load("models/model_overfit_resnet50_middle.pth"))
@@ -22,10 +25,10 @@ def predict_and_visualize():
 
     for seq in tqdm(dataloader, total=len(dataloader), desc="Sequence:"):
         preds = []
-        imgs, gt_masks, boxes = seq
+        imgs, gt_masks, boxes, padding = seq
         imgs = torch.cat(imgs).to(device)
         with torch.no_grad():
-            _, output = model(imgs, boxes, gt_masks)
+            _, output = model(imgs, boxes, gt_masks, padding)
             preds.extend(output)
 
         mask_idx = 0

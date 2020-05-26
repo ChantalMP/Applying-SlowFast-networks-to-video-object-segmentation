@@ -11,7 +11,8 @@ from random import randint
 
 def evaluate(model, device, writer=None, global_step=None):
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms)
+    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=130,
+                           fast_pathway_size=16)
     dataloader = DataLoader(dataset, batch_size=1)
     model.eval()
 
@@ -22,11 +23,11 @@ def evaluate(model, device, writer=None, global_step=None):
 
     for seq in tqdm(dataloader, total=len(dataloader), desc="Evaluating with Sequence:"):
         preds = []
-        imgs, gt_masks, boxes = seq
+        imgs, gt_masks, boxes, padding = seq
         imgs = torch.cat(imgs).to(device)
         count += imgs.shape[0]
         with torch.no_grad():
-            loss, output = model(imgs, boxes, gt_masks)
+            loss, output = model(imgs, boxes, gt_masks, padding)
             total_loss += loss.item()
             preds.extend(output)
 

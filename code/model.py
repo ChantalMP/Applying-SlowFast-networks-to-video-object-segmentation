@@ -83,6 +83,73 @@ class FeatureExtractor(nn.Module):
 
         return torch.stack(outputs)
 
+class SlowFastLayers(nn.Module):
+    def __init__(self, input_size):
+        # TODO consider padding
+        super(SlowFastLayers, self).__init__()
+        self.fast_conv1 = nn.Conv3d(
+            in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
+            out_channels=32,
+            kernel_size=(8, 3, 3))
+
+        self.slow_conv1 = nn.Conv3d(
+            in_channels=input_size,
+            out_channels=256,
+            kernel_size=(2, 3, 3))  # TODO consider padding
+            # TODO first version is without stride but with smaller kernel
+
+        self.fast_conv2 = nn.Conv3d(
+            in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
+            out_channels=64,
+            kernel_size=(16, 3, 3))
+
+        self.slow_conv2 = nn.Conv3d(
+            in_channels=input_size,
+            out_channels=256,
+            kernel_size=(4, 3, 3)
+        )
+
+        # self.conv_f2s = nn.Conv3d(
+        #     dim_in,
+        #     dim_in * fusion_conv_channel_ratio,
+        #     kernel_size=[fusion_kernel, 1, 1],
+        #     stride=[alpha, 1, 1],
+        #     padding=[fusion_kernel // 2, 0, 0],
+        #     bias=False,
+        # )
+
+        self.relu = nn.ReLU(inplace=True)
+
+    def fuse(self, slow, fast):
+        fuse = self.conv_f2s(fast) #TODO how does this work
+        # TODO maybe batchnorm
+        fuse = self.relu(fuse)
+        x_s_fuse = torch.cat([slow, fuse], 1)
+        return x_s_fuse, fast
+
+    def forward(self, slow, fast):
+        #First Conv Layer
+        slow = self.slow_conv1(slow)
+        # TODO maybe batchnorm
+        slow = self.relu(slow)
+
+        fast = self.fast_conv1(fast)
+        # TODO maybe batchnorm
+        fast = self.relu(fast)
+
+        #Fuse
+        slow, fast = self.fuse(slow, fast)
+
+        # Second Conv Layer
+        slow = self.slow_conv2(slow)
+        # TODO maybe batchnorm
+        slow = self.relu(slow)
+
+        fast = self.fast_conv2(fast)
+        # TODO maybe batchnorm
+        fast = self.relu(fast)
+        # TODO maybe don't use Relu at the end, but SlowFast seems to do it
+        return slow, fast
 
 class SegmentationModel(nn.Module):
     def __init__(self, device):
@@ -90,17 +157,8 @@ class SegmentationModel(nn.Module):
         self.device = device
         self.feature_extractor = FeatureExtractor(name='efficientnet-b0')
 
-        self.fast_conv1 = nn.Conv3d(
-            in_channels=self.feature_extractor.output_size,  # 1280 for efficientnet, 512 for resnet
-            out_channels=64,
-            kernel_size=(16, 3, 3))  # TODO consider padding
+        self.slow_fast = SlowFastLayers(self.feature_extractor.output_size)
 
-        self.slow_conv1 = nn.Conv3d(
-            in_channels=self.feature_extractor.output_size,
-            out_channels=256,
-            kernel_size=(4, 3, 3)  # TODO consider padding
-            # TODO first version is without stride but with smaller kernel
-        )
         # TODO: Unlike Track-RCNN, we can't have both of these convs set to identity from the start as identity kernel by definition requires in_channels==out_channels
         # TODO: But maybe we can still use that trick for the slow path
 
@@ -157,8 +215,7 @@ class SegmentationModel(nn.Module):
 
             if len(slow_valid_features) == 0:  # If no detections in batch, skip
                 continue
-            batch_slow_output_features = self.slow_conv1(torch.stack(slow_valid_features))
-            batch_fast_output_features = self.fast_conv1(torch.stack(fast_valid_features))
+            batch_slow_output_features, batch_fast_output_features = self.slow_fast(torch.stack(slow_valid_features), torch.stack(fast_valid_features))
 
             merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features], dim=1)[:, :, 0, :, :]
 

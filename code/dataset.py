@@ -26,7 +26,7 @@ class DAVISDataset(Dataset):
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
-        sequences_names = [x.strip() for x in tmp][0:1]
+        sequences_names = [x.strip() for x in tmp]
         self.sequences = defaultdict(dict)
 
         for seq in sequences_names:

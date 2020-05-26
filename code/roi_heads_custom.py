@@ -43,7 +43,7 @@ def maskrcnn_inference(x, labels):
     return mask_prob_list
 
 
-def project_masks_on_boxes(gt_masks, boxes, M):
+def project_masks_on_boxes(gt_masks, boxes, M, device):
     """
     Given segmentation masks and the bounding boxes corresponding
     to the location of the masks in the image, this function
@@ -51,13 +51,14 @@ def project_masks_on_boxes(gt_masks, boxes, M):
     boxes. This prepares the masks for them to be fed to the
     loss computation as the targets.
     """
-    rois = torch.cat([torch.zeros_like(boxes)[:, :1], boxes],
-                     dim=1)  # we append something that corresponds to batch idx, see convert_boxes_to_roi_format
+    object_idxs = torch.Tensor([[i] for i in range(len(boxes))]).to(device)
+    # we append something that corresponds to batch idx, see convert_boxes_to_roi_format
+    rois = torch.cat([object_idxs, boxes], dim=1)
     gt_masks = gt_masks[:, None].to(rois)
     return roi_align(gt_masks, rois, (M, M), 1.)[:, 0]
 
 
-def maskrcnn_loss(mask_logits, proposals, gt_masks):
+def maskrcnn_loss(mask_logits, proposals, gt_masks, device):
     """
     Arguments:
         proposals (list[BoxList])
@@ -70,7 +71,7 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks):
 
     discretization_size = mask_logits.shape[-1]
     mask_targets = [
-        project_masks_on_boxes(m, p, discretization_size)
+        project_masks_on_boxes(m, p, discretization_size, device)
         for m, p in zip(gt_masks, proposals)
     ]
     mask_targets = torch.cat(mask_targets, dim=0)
@@ -79,6 +80,22 @@ def maskrcnn_loss(mask_logits, proposals, gt_masks):
     # accept empty tensors, so handle it separately
     if mask_targets.numel() == 0:
         return mask_logits.sum() * 0
+
+    # plot targets and ground truth for debugging
+    # from matplotlib import pyplot as plt
+    # plt.imshow(mask_targets[0].cpu().numpy())
+    # plt.title("GT 0")
+    # plt.show()
+    # plt.imshow(mask_logits[0].detach().cpu().numpy())
+    # plt.title("Pred 0")
+    # plt.show()
+    # plt.imshow(mask_targets[1].cpu().numpy())
+    # plt.title("GT 1")
+    # plt.show()
+    # plt.imshow(mask_logits[1].detach().cpu().numpy())
+    # plt.title("Pred 1")
+    # plt.show()
+
 
     # TODO make sure to use correct prososal_mask to correct gt_mask
     mask_loss = F.binary_cross_entropy_with_logits(mask_logits, mask_targets)
@@ -91,12 +108,13 @@ class RoIHeads(torch.nn.Module):
                  mask_roi_pool,
                  mask_head,
                  mask_predictor,
-                 ):
+                 device):
         super(RoIHeads, self).__init__()
 
         self.mask_roi_pool = mask_roi_pool
         self.mask_head = mask_head
         self.mask_predictor = mask_predictor
+        self.device = device
 
     def postprocess_detections(self, class_logits, box_regression, proposals, image_shapes):
         device = class_logits.device
@@ -174,13 +192,13 @@ class RoIHeads(torch.nn.Module):
 
             rcnn_loss_mask = maskrcnn_loss(
                 mask_logits, mask_proposals,
-                gt_masks)
+                gt_masks, self.device)
             return rcnn_loss_mask
         else:
             if gt_masks is not None:
                 rcnn_loss_mask = maskrcnn_loss(
                     mask_logits, mask_proposals,
-                    gt_masks)
+                    gt_masks, self.device)
 
                 return rcnn_loss_mask, mask_logits.sigmoid()
 

@@ -29,9 +29,9 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 def main():
-    epochs = 40 * 80
+    epochs = 2000
     lr = 1e-4
-    logging_frequency = 10
+    logging_frequency = 50
     slow_pathway_size = 4
     fast_pathway_size = 16
 
@@ -53,6 +53,7 @@ def main():
     opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
     writer: SummaryWriter = SummaryWriter()
     global_step = 0
+    best_iou = -1
 
     for epoch in tqdm(range(epochs), total=epochs, desc="Epoch:"):
         total_loss = 0.
@@ -63,7 +64,7 @@ def main():
             imgs = torch.cat(imgs).to(device)
             loss = model(imgs, boxes, gt_masks, padding)
             total_loss += loss.item()
-            count += imgs.shape[0]
+            count += imgs.shape[0] - (int(padding[0]) * 8) - (int(padding[1]) * 8)
             loss.backward()
             opt.step()
             opt.zero_grad()
@@ -71,13 +72,19 @@ def main():
 
             if idx % logging_frequency == 0:
                 total_loss = total_loss / count
-                print(f'\nLoss: {total_loss}\n')
+                print(f'\nLoss: {total_loss:.4f}\n')
                 writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
-                total_loss = 0
+                total_loss = 0.
+                count = 0
 
-                # evaluate(model, device, writer=writer, global_step=global_step)
+                val_iou = evaluate(model, device, writer=writer, global_step=global_step)
 
-    torch.save(model.state_dict(), "models/model_overfit_resnet50_middle.pth")
+                if val_iou > best_iou:
+                    best_iou = val_iou
+                    print(f'Saving model with iou: {val_iou}')
+                    torch.save(model.state_dict(), "models/model_best.pth")
+
+    torch.save(model.state_dict(), "models/model.pth")
 
 
 if __name__ == '__main__':

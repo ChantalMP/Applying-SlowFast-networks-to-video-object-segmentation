@@ -173,7 +173,8 @@ class SegmentationModel(nn.Module):
         mask_predictor = MaskRCNNPredictor(mask_predictor_in_channels,
                                            mask_dim_reduced, num_classes=1)  # TODO either 1 or 2
 
-        self.roi_head = RoIHeads(mask_roi_pool=mask_roi_pool, mask_head=mask_head, mask_predictor=mask_predictor)
+        self.roi_head = RoIHeads(mask_roi_pool=mask_roi_pool, mask_head=mask_head, mask_predictor=mask_predictor,
+                                 device=device)
 
         self.bs = 16
 
@@ -186,10 +187,18 @@ class SegmentationModel(nn.Module):
                 image_features = torch.cat(
                     [torch.zeros_like(image_features[:1, :, :, :].repeat(overlap, 1, 1, 1)), image_features])
 
+            else:  # As those bboxes correspond to imges only used for padding, we don't need them
+                bboxes = bboxes[overlap:]
+                if targets is not None:
+                    targets = targets[overlap:]
+
             if padding[1].item():
                 image_features = torch.cat(
                     [image_features, torch.zeros_like(image_features[:1, :, :, :].repeat(overlap, 1, 1, 1))])
-        # 0 0 0 0 X X X X 0 0 0 0
+            else:
+                bboxes = bboxes[:-overlap]
+                if targets is not None:
+                    targets = targets[:-overlap]
 
         valid_features_mask = []
 
@@ -220,7 +229,8 @@ class SegmentationModel(nn.Module):
                         0, 1))
 
                     batch_bboxes.append(torch.cat(bboxes[feature_idx]).float().to(device=self.device))
-                    batch_targets.append(torch.cat(targets[feature_idx]).float().to(device=self.device))
+                    batch_targets.append(torch.cat(targets[feature_idx]).float().to(
+                        device=self.device))  # TODO make runnable without targets
 
             if len(slow_valid_features) == 0:  # If no detections in batch, skip
                 continue

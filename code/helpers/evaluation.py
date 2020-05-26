@@ -9,7 +9,7 @@ from helpers.utils import convert_mask_pred_to_ground_truth_format, intersection
 from random import randint
 
 
-def evaluate(model, device):
+def evaluate(model, device, writer=None, global_step=None):
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=1)
@@ -63,3 +63,7 @@ def evaluate(model, device):
 
     print(f'\nVal Loss: {total_loss:.4f}\n'
           f'IoU: {avg_iou:.4f}\n')
+
+    if writer is not None and global_step is not None:
+        writer.add_scalar('Loss/Val', total_loss, global_step=global_step)
+        writer.add_scalar('IoU', avg_iou, global_step=global_step)

@@ -26,10 +26,11 @@ import torch
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
+from torch.utils.tensorboard import SummaryWriter
 
 
 def main():
-    epochs = 40*80
+    epochs = 40
     lr = 1e-4
     logging_frequency = 10
 
@@ -48,6 +49,8 @@ def main():
     print(f'{total_trainable_params:,} training parameters.')
 
     opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
+    writer: SummaryWriter = SummaryWriter()
+    global_step = 0
 
     for epoch in tqdm(range(epochs), total=epochs, desc="Epoch:"):
         total_loss = 0.
@@ -62,12 +65,15 @@ def main():
             loss.backward()
             opt.step()
             opt.zero_grad()
+            global_step += 1
 
             if idx % logging_frequency == 0:
-                print(f'\nLoss: {total_loss / count}\n')
+                total_loss = total_loss / count
+                print(f'\nLoss: {total_loss}\n')
+                writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
                 total_loss = 0
 
-                # evaluate(model, device)
+                evaluate(model, device, writer=writer, global_step=global_step)
 
     torch.save(model.state_dict(), "models/model_overfit_resnet50_middle.pth")
 

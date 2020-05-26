@@ -7,18 +7,22 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 import matplotlib.patches as patches
 import torch
+from math import ceil
+
 
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py
 # Reference how to compute the bounding boxes: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 
 class DAVISDataset(Dataset):
-    def __init__(self, root, subset='train', resolution='480p', transforms=None):
+    def __init__(self, root, subset='train', resolution='480p', transforms=None, max_seq_length=40, fast_pathway_size=16):
         self.root = root
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
         self.imagesets_path = os.path.join(self.root, 'ImageSets', '2017')
         self.transforms = transforms
+        self.max_seq_length = max_seq_length
+        self.fast_pathway_size = fast_pathway_size
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
@@ -29,11 +33,10 @@ class DAVISDataset(Dataset):
             images = np.sort(glob(os.path.join(self.img_path, seq, '*.jpg'))).tolist()
             self.sequences[seq]['images'] = images
             masks = np.sort(glob(os.path.join(self.mask_path, seq, '*.png'))).tolist()
-            #masks.extend([-1] * (len(images) - len(masks)))
+            # masks.extend([-1] * (len(images) - len(masks)))
             self.sequences[seq]['masks'] = masks
 
-
-        self.data = []
+        self.data = []  # padding is a tuple like (False,False) first one indicates need to append before the sequence, second one after the sequence
         # create actual data instead of paths, and compute bboxes
         for seq in self.sequences:
             imgs = []
@@ -70,21 +73,30 @@ class DAVISDataset(Dataset):
                 masks.append(img_masks)
                 boxes.append(img_boxes)
 
-            self.data.append((imgs, masks, boxes))
+            seq_len = len(imgs)
+            start_idx = 0
+            for idx in range(ceil(seq_len / self.max_seq_length)):
+                batch_imgs = imgs[start_idx:start_idx + self.max_seq_length]
+                batch_masks = masks[start_idx:start_idx + self.max_seq_length]
+                batch_boxes = boxes[start_idx:start_idx + self.max_seq_length]
+                start_idx += self.max_seq_length - self.fast_pathway_size
+
+                padding = (idx == 0, idx + 1 == ceil(seq_len / self.max_seq_length))
+                self.data.append((batch_imgs, batch_masks, batch_boxes, padding))
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, i):
-        imgs, masks, boxes = self.data[i]
+        imgs, masks, boxes, padding = self.data[i]
         if self.transforms:
             transformed_imgs = []
             for img in imgs:
                 transformed_imgs.append(self.transforms(img))
 
-            return transformed_imgs, masks, boxes
+            return transformed_imgs, masks, boxes, padding
 
-        return imgs, masks, boxes
+        return imgs, masks, boxes, padding
 
 
 if __name__ == '__main__':
@@ -101,9 +113,9 @@ if __name__ == '__main__':
             ax.imshow(image.squeeze())
             i = 0
             for mask, box in zip(masks, boxes):
-                #ax = plt.subplot(plot_count, 1, 2+i)
-                ax.imshow(mask.squeeze(), alpha = 0.4)
-                i+=1
+                # ax = plt.subplot(plot_count, 1, 2+i)
+                ax.imshow(mask.squeeze(), alpha=0.4)
+                i += 1
 
                 x = box[0][0].item()
                 y = box[0][1].item()

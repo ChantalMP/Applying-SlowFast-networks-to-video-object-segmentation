@@ -67,9 +67,9 @@ def main():
                 print(f'\nLoss: {total_loss / count}\n')
                 total_loss = 0
 
-                evaluate(model, device)
+                # evaluate(model, device)
 
-    torch.save(model.state_dict(), "models/model_overfit_efficientnet_original.pth")
+    torch.save(model.state_dict(), "models/model_overfit_resnet50_middle.pth")
 
 
 if __name__ == '__main__':

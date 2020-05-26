@@ -17,7 +17,7 @@ def predict_and_visualize():
     model: SegmentationModel = SegmentationModel(device=device)
     model.to(device)
     model.eval()
-    model.load_state_dict(torch.load("models/model_overfit_efficientnet_original.pth"))
+    model.load_state_dict(torch.load("models/model_overfit_resnet50_middle.pth"))
 
 
     for seq in tqdm(dataloader, total=len(dataloader), desc="Sequence:"):

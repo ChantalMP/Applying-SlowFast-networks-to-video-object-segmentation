@@ -39,7 +39,7 @@ class DAVISDataset(Dataset):
             imgs = []
             masks = []
             boxes = []
-            for img, msk in zip(self.sequences[seq]['images'][:2], self.sequences[seq]['masks'][:2]):
+            for img, msk in zip(self.sequences[seq]['images'][:1], self.sequences[seq]['masks'][:1]):
                 image = Image.open(img)
                 image.thumbnail((256, 256), Image.ANTIALIAS)  # Crop image to maximum 256
                 image = np.array(image)

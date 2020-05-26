@@ -10,29 +10,93 @@ from torchvision import models
 
 # TODO consider how to merge slow and fast, also consider regular lateral connections if necessary
 
+class FeatureExtractor(nn.Module):
+    def __init__(self, name='resnet_50'):
+        super(FeatureExtractor, self).__init__()
+        supported_extractors = ['resnet_18', 'resnet_50', 'efficientnet-b0']
+        if name not in supported_extractors:
+            print(f'{name} not supported')
+
+        else:
+            print(f'{name} feature extractor')
+
+        self.name = name
+
+        if self.name == 'resnet_18':
+            self.net = models.resnet18(pretrained=True)
+            self.net.layer3._modules['0'].conv1.stride = (1, 1)
+            self.net.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)
+            self.net.layer4._modules['0'].conv1.stride = (1, 1)
+            self.net.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)
+            self.output_size = 512
+
+        elif self.name == 'resnet_50':
+            self.net = models.resnet50(pretrained=True)
+            self.output_size = 512
+            # Either make it not get that small or take from earlier layers
+            # self.net.layer3._modules['0'].conv2.stride = (1, 1)
+            # self.net.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)
+            # self.net.layer4._modules['0'].conv2.stride = (1, 1)
+            # self.net.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)
+            # self.output_size = 2048
+
+        elif self.name == 'efficientnet-b0':
+            self.net = EfficientNet.from_pretrained('efficientnet-b0')
+            self.net._blocks._modules['5']._depthwise_conv.stride = [1, 1]
+            self.net._blocks._modules['11']._depthwise_conv.stride = [1, 1]
+            self.output_size = 1280
+
+        self.bs = 32
+
+    def _extract_features_for_batch(self, x):
+        if self.name == 'resnet_18':
+            x = self.net.conv1(x)
+            x = self.net.bn1(x)
+            x = self.net.relu(x)
+            x = self.net.maxpool(x)
+            x = self.net.layer1(x)
+            x = self.net.layer2(x)
+            x = self.net.layer3(x)
+            x = self.net.layer4(x)
+
+        elif self.name == 'resnet_50':
+            x = self.net.conv1(x)
+            x = self.net.bn1(x)
+            x = self.net.relu(x)
+            x = self.net.maxpool(x)
+            x = self.net.layer1(x)
+            x = self.net.layer2(x)  # notice that layer3 and 4 missing in this case
+            if self.output_size == 2048:
+                x = self.net.layer3(x)
+                x = self.net.layer4(x)
+
+        elif self.name == 'efficientnet-b0':
+            x = self.net.extract_features(x)
+
+        return x
+
+    def forward(self, x):
+        outputs = []
+        # Extract feature from respective extractor
+        for batch_idx in range(ceil(len(x) / self.bs)):
+            outputs.extend(self._extract_features_for_batch(x[batch_idx * self.bs:(batch_idx + 1) * self.bs]))
+
+        return torch.stack(outputs)
+
 
 class SegmentationModel(nn.Module):
     def __init__(self, device):
         super(SegmentationModel, self).__init__()
         self.device = device
-
-        # self.resnet = models.resnet18(pretrained=True)
-        # self.resnet.layer3._modules['0'].conv1.stride = (1, 1)  # TODO decide if this fix is actually helping or hurting
-        # self.resnet.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
-        # self.resnet.layer4._modules['0'].conv1.stride = (1, 1)
-        # self.resnet.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)  # Fixing too much pooling
-
-        self.efficient_net = EfficientNet.from_pretrained('efficientnet-b0') #TODO use gen-efficientnet repository
-        #self.efficient_net._blocks._modules['5']._depthwise_conv.stride = [1, 1]
-        #self.efficient_net._blocks._modules['11']._depthwise_conv.stride = [1, 1]
+        self.feature_extractor = FeatureExtractor(name='efficientnet-b0')
 
         self.fast_conv1 = nn.Conv3d(
-            in_channels=1280, #1280 for efficientnet, 512 for resnet
+            in_channels=self.feature_extractor.output_size,  # 1280 for efficientnet, 512 for resnet
             out_channels=64,
             kernel_size=(16, 3, 3))  # TODO consider padding
 
         self.slow_conv1 = nn.Conv3d(
-            in_channels=1280,
+            in_channels=self.feature_extractor.output_size,
             out_channels=256,
             kernel_size=(4, 3, 3)  # TODO consider padding
             # TODO first version is without stride but with smaller kernel
@@ -54,36 +118,13 @@ class SegmentationModel(nn.Module):
         self.roi_head = RoIHeads(mask_roi_pool=mask_roi_pool, mask_head=mask_head, mask_predictor=mask_predictor)
 
         self.bs = 32
-
         # TODO lateral connection
         # TODO maskrcnn_loss supports discretinzation size (meaning they don't have to be the same size)
 
-    def extract_resnet_features(self, x):
-        # See note [TorchScript super()]
-        resnet = self.resnet
-        x = resnet.conv1(x)
-        x = resnet.bn1(x)
-        x = resnet.relu(x)
-        x = resnet.maxpool(x)
-
-        x = resnet.layer1(x)
-        x = resnet.layer2(x)
-        x = resnet.layer3(x)
-        x = resnet.layer4(x)
-        return x
-
-    def extract_efficient_net_features(self, x):
-        efficient_net = self.efficient_net
-        """ Calls extract_features to extract features, applies final linear layer, and returns logits. """
-        bs = x.size(0)
-        # Convolution layers
-        x = efficient_net.extract_features(x)
-        return x
-
     def forward(self, x, bboxes, targets=None):
-        #image_features = self.extract_resnet_features(x)
-        image_features = self.extract_efficient_net_features(x)
-        image_features = torch.cat([torch.zeros_like(image_features[:1, :, :, :].repeat(8,1,1,1)), image_features, torch.zeros_like(image_features[:1, :, :, :].repeat(8,1,1,1))])
+        image_features = self.feature_extractor(x)
+        image_features = torch.cat([torch.zeros_like(image_features[:1, :, :, :].repeat(8, 1, 1, 1)), image_features,
+                                    torch.zeros_like(image_features[:1, :, :, :].repeat(8, 1, 1, 1))])
         # 0 0 0 0 X X X X 0 0 0 0
 
         valid_features_mask = []
@@ -95,27 +136,26 @@ class SegmentationModel(nn.Module):
             else:
                 valid_features_mask.append(1)
 
-
         # TODO modify this according to slowfast\
         # TODO instead of computing these, prepare them for batch creation at once
         total_loss = 0.
         pred_outputs = []
         for batch_idx in range(ceil(len(x) / self.bs)):
-            feature_idxs = range(batch_idx*self.bs, min((batch_idx+1)*self.bs, len(x)))
+            feature_idxs = range(batch_idx * self.bs, min((batch_idx + 1) * self.bs, len(x)))
             slow_valid_features = []
             fast_valid_features = []
             batch_bboxes = []
             batch_targets = []
             for feature_idx in feature_idxs:
                 if valid_features_mask[feature_idx] == 1:
-                    image_feature_idx = feature_idx+8
+                    image_feature_idx = feature_idx + 8
                     slow_valid_features.append(image_features[image_feature_idx - 2:image_feature_idx + 2].transpose(0, 1))
                     fast_valid_features.append(image_features[image_feature_idx - 8:image_feature_idx + 8].transpose(0, 1))
 
                     batch_bboxes.append(torch.cat(bboxes[feature_idx]).float().to(device=self.device))
                     batch_targets.append(torch.cat(targets[feature_idx]).float().to(device=self.device))
 
-            if len(slow_valid_features) == 0: # If no detections in batch, skip
+            if len(slow_valid_features) == 0:  # If no detections in batch, skip
                 continue
             batch_slow_output_features = self.slow_conv1(torch.stack(slow_valid_features))
             batch_fast_output_features = self.fast_conv1(torch.stack(fast_valid_features))
@@ -140,20 +180,3 @@ class SegmentationModel(nn.Module):
             return total_loss
         else:
             return total_loss, torch.cat(pred_outputs)
-
-
-if __name__ == '__main__':
-    # TODO consider normalization? Values between 0 and 1?
-    image_sequence = torch.rand((20, 3, 256, 256), dtype=torch.float32)
-    model = SegmentationModel()
-    model(image_sequence)
-
-    pass
-# resnet18 = models.mnasnet1_0(pretrained=True)
-
-# Find total parameters and trainable parameters(most paramaters are not trainable, which speed up training a lot)
-# total_params = sum(p.numel() for p in resnet18.parameters())
-# print(f'{total_params:,} total parameters.')
-# total_trainable_params = sum(
-#     p.numel() for p in resnet18.parameters() if p.requires_grad)
-# print(f'{total_trainable_params:,} training parameters.')

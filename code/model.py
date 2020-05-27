@@ -86,33 +86,33 @@ class SlowFastLayers(nn.Module):
         super(SlowFastLayers, self).__init__()
         self.fast_conv1 = nn.Conv3d(
             in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
-            out_channels=32,
+            out_channels=64,
             kernel_size=(8, 3, 3),
             padding=(0, 1, 1))
 
         self.slow_conv1 = nn.Conv3d(
             in_channels=input_size,
-            out_channels=256,
+            out_channels=512,
             kernel_size=(2, 3, 3),
             padding=(0, 1, 1))
         # TODO maybe with stride
 
         self.fast_conv2 = nn.Conv3d(
-            in_channels=32,
-            out_channels=64,
+            in_channels=64,
+            out_channels=128,
             kernel_size=(9, 3, 3),
             padding=(0, 1, 1))
 
         self.slow_conv2 = nn.Conv3d(
-            in_channels=320,
-            out_channels=512,
+            in_channels=640,
+            out_channels=896,
             kernel_size=(3, 3, 3),
             padding=(0, 1, 1)
         )
 
         self.conv_f2s = nn.Conv3d(
-            32,
             64,
+            128,
             kernel_size=[3, 1, 1],
             stride=[3, 1, 1],
             padding=[0, 0, 0],
@@ -166,7 +166,7 @@ class SegmentationModel(nn.Module):
 
         mask_layers = (256, 256, 256, 256)
         mask_dilation = 1
-        mask_head = MaskRCNNHeads(576, mask_layers, mask_dilation)
+        mask_head = MaskRCNNHeads(1024, mask_layers, mask_dilation)
 
         mask_predictor_in_channels = 256  # == mask_layers[-1]
         mask_dim_reduced = 256

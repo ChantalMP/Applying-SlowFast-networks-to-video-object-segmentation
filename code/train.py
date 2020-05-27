@@ -26,6 +26,7 @@ from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
 from torch.utils.tensorboard import SummaryWriter
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 def main():
@@ -36,7 +37,7 @@ def main():
     fast_pathway_size = 16
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=60,
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=50,
                            fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -51,6 +52,8 @@ def main():
     print(f'{total_trainable_params:,} training parameters.')
 
     opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
+    scheduler = ReduceLROnPlateau(opt, 'min')
+
     writer: SummaryWriter = SummaryWriter()
     global_step = 0
     best_iou = -1
@@ -77,12 +80,14 @@ def main():
                 total_loss = 0.
                 count = 0
 
-                val_iou = evaluate(model, device, writer=writer, global_step=global_step)
+                val_iou, val_loss = evaluate(model, device, writer=writer, global_step=global_step)
 
                 if val_iou > best_iou:
                     best_iou = val_iou
                     print(f'Saving model with iou: {val_iou}')
-                    torch.save(model.state_dict(), "models/model_best.pth")
+                    torch.save(model.state_dict(), "models/model_beste4_plateau_scheduler.pth")
+
+                scheduler.step(val_loss)
 
     torch.save(model.state_dict(), "models/model.pth")
 

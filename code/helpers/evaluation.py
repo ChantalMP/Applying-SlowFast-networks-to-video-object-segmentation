@@ -49,6 +49,7 @@ def evaluate(model, device, writer=None, global_step=None):
                 ax = plt.subplot(1, 1, 1)
                 ax.set_axis_off()
                 ax.imshow(img)
+                plotted_count = 0
             for box, gt_mask in zip(img_boxes, img_gt_masks):  # Wont work when not using gt_boxes because we can have less boxes than masks
                 box = box[0].tolist()
                 mask = preds[mask_idx].cpu().numpy().astype(np.float)
@@ -65,7 +66,9 @@ def evaluate(model, device, writer=None, global_step=None):
                     full_mask[:, :, 2] = 0.
 
                     ax.imshow(full_mask, alpha=0.3)
-                    plotted = True
+                    plotted_count += 1
+                    if plotted_count == len(img_boxes):
+                        plotted = True
 
             plt.show()
 
@@ -79,4 +82,4 @@ def evaluate(model, device, writer=None, global_step=None):
         writer.add_scalar('Loss/Val', total_loss, global_step=global_step)
         writer.add_scalar('IoU', avg_iou, global_step=global_step)
 
-    return avg_iou
+    return avg_iou, total_loss

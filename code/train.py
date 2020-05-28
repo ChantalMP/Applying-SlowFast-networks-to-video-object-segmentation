@@ -26,12 +26,11 @@ from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
 from torch.utils.tensorboard import SummaryWriter
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 
 def main():
-    epochs = 2000
-    lr = 1e-4
+    epochs = 50
+    max_lr = 0.001  # TODO maybe lower learning rate
     logging_frequency = 50
     slow_pathway_size = 4
     fast_pathway_size = 16
@@ -51,8 +50,9 @@ def main():
     total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f'{total_trainable_params:,} training parameters.')
 
-    opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
-    scheduler = ReduceLROnPlateau(opt, 'min')
+    # opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
+    opt = torch.optim.SGD(model.parameters(), lr=max_lr, momentum=0.9)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=max_lr, steps_per_epoch=len(dataloader), epochs=epochs)
 
     writer: SummaryWriter = SummaryWriter()
     global_step = 0
@@ -70,12 +70,18 @@ def main():
             count += imgs.shape[0] - (int(padding[0]) * 8) - (int(padding[1]) * 8)
             loss.backward()
             opt.step()
+            scheduler.step()
             opt.zero_grad()
             global_step += 1
+
+            current_lr = scheduler.get_last_lr()[0]
+            writer.add_scalar('Learning Rate', current_lr, global_step=global_step)
 
             if idx % logging_frequency == 0:
                 total_loss = total_loss / count
                 print(f'\nLoss: {total_loss:.4f}\n')
+
+                print(f'\nLr: {current_lr:.7f}')
                 writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
                 total_loss = 0.
                 count = 0
@@ -85,9 +91,7 @@ def main():
                 if val_iou > best_iou:
                     best_iou = val_iou
                     print(f'Saving model with iou: {val_iou}')
-                    torch.save(model.state_dict(), "models/model_beste4_plateau_scheduler.pth")
-
-                scheduler.step(val_loss)
+                    torch.save(model.state_dict(), "models/model_best_onecycle_scheduler_resnet18_bn.pth")
 
     torch.save(model.state_dict(), "models/model.pth")
 

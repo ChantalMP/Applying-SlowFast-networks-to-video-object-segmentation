@@ -14,14 +14,14 @@ def predict_and_visualize():
     fast_pathway_size = 16
     overlap = fast_pathway_size // 2
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=200,
+    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=200,
                            fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
                                                  fast_pathway_size=fast_pathway_size)
     model.to(device)
-    model.load_state_dict(torch.load("models/model_overfit_multi_seq_best.pth"))
+    model.load_state_dict(torch.load("models/model_best_onecycle_scheduler_resnet18_bn.pth"))
 
     for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequence:"):
         model.eval()
@@ -63,7 +63,7 @@ def predict_and_visualize():
                 mask_idx +=1
                 ax.imshow(full_mask, alpha=0.3)
 
-            plt.savefig(f'data/output/{mask_idx}.png')
+            plt.savefig(f'data/output/pred_output/{mask_idx}.png')
 
 
 if __name__ == '__main__':

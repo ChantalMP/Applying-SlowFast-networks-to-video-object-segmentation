@@ -90,6 +90,8 @@ class SlowFastLayers(nn.Module):
             kernel_size=(8, 3, 3),
             padding=(0, 1, 1))
 
+        self.bn_f1 = nn.BatchNorm3d(64)
+
         self.slow_conv1 = nn.Conv3d(
             in_channels=input_size,
             out_channels=512,
@@ -97,11 +99,15 @@ class SlowFastLayers(nn.Module):
             padding=(0, 1, 1))
         # TODO maybe with stride
 
+        self.bn_s1 = nn.BatchNorm3d(512)
+
         self.fast_conv2 = nn.Conv3d(
             in_channels=64,
             out_channels=128,
             kernel_size=(9, 3, 3),
             padding=(0, 1, 1))
+
+        self.bn_f2 = nn.BatchNorm3d(128)
 
         self.slow_conv2 = nn.Conv3d(
             in_channels=640,
@@ -109,6 +115,8 @@ class SlowFastLayers(nn.Module):
             kernel_size=(3, 3, 3),
             padding=(0, 1, 1)
         )
+
+        self.bn_s2 = nn.BatchNorm3d(896)
 
         self.conv_f2s = nn.Conv3d(
             64,
@@ -119,11 +127,13 @@ class SlowFastLayers(nn.Module):
             bias=False,
         )
 
+        self.bn_f2s = nn.BatchNorm3d(128)
+
         self.relu = nn.ReLU(inplace=True)
 
     def fuse(self, slow, fast):
         fuse = self.conv_f2s(fast)
-        # TODO maybe batchnorm
+        fuse = self.bn_f2s(fuse)
         fuse = self.relu(fuse)
         x_s_fuse = torch.cat([slow, fuse], 1)
         return x_s_fuse, fast
@@ -131,11 +141,11 @@ class SlowFastLayers(nn.Module):
     def forward(self, slow, fast):
         #First Conv Layer
         slow = self.slow_conv1(slow)
-        # TODO maybe batchnorm
+        slow = self.bn_s1(slow)
         slow = self.relu(slow)
 
         fast = self.fast_conv1(fast)
-        # TODO maybe batchnorm
+        fast = self.bn_f1(fast)
         fast = self.relu(fast)
 
         #Fuse
@@ -143,11 +153,11 @@ class SlowFastLayers(nn.Module):
 
         # Second Conv Layer
         slow = self.slow_conv2(slow)
-        # TODO maybe batchnorm
+        slow = self.bn_s2(slow)
         slow = self.relu(slow)
 
         fast = self.fast_conv2(fast)
-        # TODO maybe batchnorm
+        fast = self.bn_f2(fast)
         fast = self.relu(fast)
         # TODO maybe don't use Relu at the end, but SlowFast seems to do it
         return slow, fast
@@ -156,7 +166,7 @@ class SegmentationModel(nn.Module):
     def __init__(self, device, slow_pathway_size, fast_pathway_size):
         super(SegmentationModel, self).__init__()
         self.device = device
-        self.feature_extractor = FeatureExtractor(name='resnet_50')
+        self.feature_extractor = FeatureExtractor(name='resnet_18')
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
 
@@ -166,7 +176,7 @@ class SegmentationModel(nn.Module):
 
         mask_layers = (256, 256, 256, 256)
         mask_dilation = 1
-        mask_head = MaskRCNNHeads(1024, mask_layers, mask_dilation)
+        mask_head = MaskRCNNHeads(1536, mask_layers, mask_dilation)
 
         mask_predictor_in_channels = 256  # == mask_layers[-1]
         mask_dim_reduced = 256
@@ -235,8 +245,11 @@ class SegmentationModel(nn.Module):
             if len(slow_valid_features) == 0:  # If no detections in batch, skip
                 continue
             batch_slow_output_features, batch_fast_output_features = self.slow_fast(torch.stack(slow_valid_features), torch.stack(fast_valid_features))
-
-            merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features], dim=1)[:, :, 0, :, :]
+            # directly pass image features of middle frame as well
+            orig_resnet_features = torch.stack(slow_valid_features)[:, :,
+                                   self.slow_pathway_size // 2:self.slow_pathway_size // 2 + 1, :, :]
+            merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features, orig_resnet_features],
+                                        dim=1)[:, :, 0, :, :]
 
             image_sizes = [tuple(x.shape[2:4])] * len(merged_features)
             if self.training:

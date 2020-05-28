@@ -43,6 +43,7 @@ def evaluate(model, device, writer=None, global_step=None):
             boxes = boxes[:-overlap]
 
         mask_idx = 0
+        plt_needed = False
         for img_idx, (img_boxes, img_gt_masks) in enumerate(zip(boxes, gt_masks)):
             img = imgs[img_idx].cpu().numpy().transpose(1, 2, 0)
             if not plotted:
@@ -50,6 +51,7 @@ def evaluate(model, device, writer=None, global_step=None):
                 ax.set_axis_off()
                 ax.imshow(img)
                 plotted_count = 0
+                plt_needed = True
             for box, gt_mask in zip(img_boxes, img_gt_masks):  # Wont work when not using gt_boxes because we can have less boxes than masks
                 box = box[0].tolist()
                 mask = preds[mask_idx].cpu().numpy().astype(np.float)
@@ -70,7 +72,9 @@ def evaluate(model, device, writer=None, global_step=None):
                     if plotted_count == len(img_boxes):
                         plotted = True
 
-            plt.show()
+            if plt_needed:
+                plt.savefig(f'data/output/eval_output/{global_step}_{mask_idx}.png')
+                plt_needed = False
 
     avg_iou = sum(intersection_over_unions) / len(intersection_over_unions)
     total_loss = total_loss / count

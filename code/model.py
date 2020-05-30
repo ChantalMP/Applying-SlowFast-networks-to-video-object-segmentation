@@ -21,8 +21,8 @@ class FeatureExtractor(nn.Module):
 
         if self.name == 'resnet_18':
             self.net = models.resnet18(pretrained=True)
-            self.net.layer3._modules['0'].conv1.stride = (1, 1)
-            self.net.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)
+            # self.net.layer3._modules['0'].conv1.stride = (1, 1)
+            # self.net.layer3._modules['0'].downsample._modules['0'].stride = (1, 1)
             self.net.layer4._modules['0'].conv1.stride = (1, 1)
             self.net.layer4._modules['0'].downsample._modules['0'].stride = (1, 1)
             self.output_size = 512
@@ -86,48 +86,48 @@ class SlowFastLayers(nn.Module):
         super(SlowFastLayers, self).__init__()
         self.fast_conv1 = nn.Conv3d(
             in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
-            out_channels=64,
+            out_channels=32,
             kernel_size=(8, 3, 3),
             padding=(0, 1, 1))
 
-        self.bn_f1 = nn.BatchNorm3d(64)
+        self.bn_f1 = nn.BatchNorm3d(32)
 
         self.slow_conv1 = nn.Conv3d(
             in_channels=input_size,
-            out_channels=512,
+            out_channels=256,
             kernel_size=(2, 3, 3),
             padding=(0, 1, 1))
         # TODO maybe with stride
 
-        self.bn_s1 = nn.BatchNorm3d(512)
+        self.bn_s1 = nn.BatchNorm3d(256)
 
         self.fast_conv2 = nn.Conv3d(
-            in_channels=64,
-            out_channels=128,
+            in_channels=32,
+            out_channels=64,
             kernel_size=(9, 3, 3),
             padding=(0, 1, 1))
 
-        self.bn_f2 = nn.BatchNorm3d(128)
+        self.bn_f2 = nn.BatchNorm3d(64)
 
         self.slow_conv2 = nn.Conv3d(
-            in_channels=640,
-            out_channels=896,
+            in_channels=320,
+            out_channels=512,
             kernel_size=(3, 3, 3),
             padding=(0, 1, 1)
         )
 
-        self.bn_s2 = nn.BatchNorm3d(896)
+        self.bn_s2 = nn.BatchNorm3d(512)
 
         self.conv_f2s = nn.Conv3d(
+            32,
             64,
-            128,
             kernel_size=[3, 1, 1],
             stride=[3, 1, 1],
             padding=[0, 0, 0],
             bias=False,
         )
 
-        self.bn_f2s = nn.BatchNorm3d(128)
+        self.bn_f2s = nn.BatchNorm3d(64)
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -176,7 +176,7 @@ class SegmentationModel(nn.Module):
 
         mask_layers = (256, 256, 256, 256)
         mask_dilation = 1
-        mask_head = MaskRCNNHeads(1536, mask_layers, mask_dilation)
+        mask_head = MaskRCNNHeads(576, mask_layers, mask_dilation)  # 1088
 
         mask_predictor_in_channels = 256  # == mask_layers[-1]
         mask_dim_reduced = 256
@@ -245,10 +245,10 @@ class SegmentationModel(nn.Module):
             if len(slow_valid_features) == 0:  # If no detections in batch, skip
                 continue
             batch_slow_output_features, batch_fast_output_features = self.slow_fast(torch.stack(slow_valid_features), torch.stack(fast_valid_features))
-            # directly pass image features of middle frame as well
-            orig_resnet_features = torch.stack(slow_valid_features)[:, :,
-                                   self.slow_pathway_size // 2:self.slow_pathway_size // 2 + 1, :, :]
-            merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features, orig_resnet_features],
+            # directly pass image features of middle frame as well # TODO Try this
+            # orig_resnet_features = torch.stack(slow_valid_features)[:, :,
+            #                        self.slow_pathway_size // 2:self.slow_pathway_size // 2 + 1, :, :]
+            merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features],  # orig_resnet_features
                                         dim=1)[:, :, 0, :, :]
 
             image_sizes = [tuple(x.shape[2:4])] * len(merged_features)

@@ -1,17 +1,20 @@
 from torch.utils.data import DataLoader
+import statistics
 from dataset import DAVISDataset
 import torch
-from torchvision.transforms import Compose, ToTensor
+from torchvision.transforms import Compose, ToTensor, Normalize
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import numpy as np
-from helpers.utils import convert_mask_pred_to_ground_truth_format, intersection_over_union
-from random import randint
+from helpers.utils import convert_mask_pred_to_ground_truth_format, intersection_over_union, revert_normalization
 
 
 def evaluate(model, device, writer=None, global_step=None):
     overlap = model.fast_pathway_size // 2
-    transforms = Compose([ToTensor()])
+    means = [0.485, 0.456, 0.406]
+    stds = [0.229, 0.224, 0.225]
+    transforms = Compose([ToTensor(), Normalize(mean=means,
+                                                std=stds)])
     dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=200,
                            fast_pathway_size=16)
     dataloader = DataLoader(dataset, batch_size=1)
@@ -49,7 +52,7 @@ def evaluate(model, device, writer=None, global_step=None):
             if not plotted:
                 ax = plt.subplot(1, 1, 1)
                 ax.set_axis_off()
-                ax.imshow(img)
+                ax.imshow(revert_normalization(img, means=means, stds=stds))
                 plotted_count = 0
                 plt_needed = True
             for box, gt_mask in zip(img_boxes, img_gt_masks):  # Wont work when not using gt_boxes because we can have less boxes than masks
@@ -76,14 +79,17 @@ def evaluate(model, device, writer=None, global_step=None):
                 plt.savefig(f'data/output/eval_output/{global_step}_{mask_idx}.png')
                 plt_needed = False
 
-    avg_iou = sum(intersection_over_unions) / len(intersection_over_unions)
+    mean_iou = statistics.mean(intersection_over_unions)
+    median_iou = statistics.median(intersection_over_unions)
     total_loss = total_loss / count
 
     print(f'\nVal Loss: {total_loss:.4f}\n'
-          f'IoU: {avg_iou:.4f}\n')
+          f'Mean_IoU: {mean_iou:.4f}\n'
+          f'Median_IoU: {median_iou:.4f}\n')
 
     if writer is not None and global_step is not None:
         writer.add_scalar('Loss/Val', total_loss, global_step=global_step)
-        writer.add_scalar('IoU', avg_iou, global_step=global_step)
+        writer.add_scalar('IoU/Mean', mean_iou, global_step=global_step)
+        writer.add_scalar('IoU/Median', median_iou, global_step=global_step)
 
-    return avg_iou, total_loss
+    return mean_iou, total_loss

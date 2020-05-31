@@ -48,11 +48,12 @@ class DAVISDataset(Dataset):
                 i.e. mini-batches of 3-channel RGB images of shape (3 x H x W), where H and W are expected to be at least 224. 
                 The images have to be loaded in to a range of [0, 1] and then normalized using mean = [0.485, 0.456, 0.406] and std = [0.229, 0.224, 0.225].'''
                 image = Image.open(img)
-                img_size = ceil((max(image.size) / min(image.size)) * 224)
-                image.thumbnail((img_size, img_size), Image.ANTIALIAS)  # Crop image to minimum of 224
+                img_size = 400
+                aspect_ratio = image.size[0] / image.size[1]
+                image = image.resize((int(img_size * aspect_ratio), img_size), Image.ANTIALIAS)
                 image = np.array(image)
                 mask = Image.open(msk)
-                mask.thumbnail((img_size, img_size), Image.ANTIALIAS)
+                mask = mask.resize((int(img_size * aspect_ratio), img_size), Image.ANTIALIAS)
                 mask = np.array(mask)
                 imgs.append(image)
 

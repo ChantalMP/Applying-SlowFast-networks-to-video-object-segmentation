@@ -15,7 +15,7 @@ def evaluate(model, device, writer=None, global_step=None):
     stds = [0.229, 0.224, 0.225]
     transforms = Compose([ToTensor(), Normalize(mean=means,
                                                 std=stds)])
-    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=200,
+    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=50,
                            fast_pathway_size=16)
     dataloader = DataLoader(dataset, batch_size=1)
     model.eval()

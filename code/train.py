@@ -29,15 +29,17 @@ from torch.utils.tensorboard import SummaryWriter
 from helpers.utils import get_linear_schedule_with_warmup
 
 def main():
-    epochs = 500
-    max_lr = 0.001  # TODO maybe lower learning rate
-    logging_frequency = 50
+    # TODO next steps: Read Davis papers, try to overfit to many sequences (2-3-4-5)
+    epochs = 50
+    max_lr = 0.1
+    logging_frequency = 100
     slow_pathway_size = 4
-    fast_pathway_size = 16
+    fast_pathway_size = 4
+    # TODO do we need to classes? Background and person?
 
     transforms = Compose([ToTensor(), Normalize(mean=[0.485, 0.456, 0.406],
                                                 std=[0.229, 0.224, 0.225])])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=55,
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=16,
                            fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

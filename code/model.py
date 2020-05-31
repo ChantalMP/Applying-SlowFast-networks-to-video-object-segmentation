@@ -10,7 +10,7 @@ from torchvision import models
 class FeatureExtractor(nn.Module):
     def __init__(self, name='resnet_50'):
         super(FeatureExtractor, self).__init__()
-        supported_extractors = ['resnet_18', 'resnet_50', 'efficientnet-b0']
+        supported_extractors = ['resnet_18', 'resnet_50', 'efficientnet-b0', 'maskrcnn_resnet50_fpn']
         if name not in supported_extractors:
             print(f'{name} not supported')
 
@@ -43,6 +43,10 @@ class FeatureExtractor(nn.Module):
             self.net._blocks._modules['11']._depthwise_conv.stride = [1, 1]
             self.output_size = 1280
 
+        elif self.name == 'maskrcnn_resnet50_fpn':
+            self.net = models.detection.maskrcnn_resnet50_fpn(pretrained=True, pretrained_backbone=True).backbone
+            self.output_size = 256
+
         self.bs = 32
 
     def _extract_features_for_batch(self, x):
@@ -70,6 +74,9 @@ class FeatureExtractor(nn.Module):
         elif self.name == 'efficientnet-b0':
             x = self.net.extract_features(x)
 
+        elif self.name == 'maskrcnn_resnet50_fpn':
+            x = self.net(x)['3']
+
         return x
 
     def forward(self, x):
@@ -87,7 +94,7 @@ class SlowFastLayers(nn.Module):
         self.fast_conv1 = nn.Conv3d(
             in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
             out_channels=32,
-            kernel_size=(8, 3, 3),
+            kernel_size=(2, 3, 3),
             padding=(0, 1, 1))
 
         self.bn_f1 = nn.BatchNorm3d(32)
@@ -104,7 +111,7 @@ class SlowFastLayers(nn.Module):
         self.fast_conv2 = nn.Conv3d(
             in_channels=32,
             out_channels=64,
-            kernel_size=(9, 3, 3),
+            kernel_size=(3, 3, 3),
             padding=(0, 1, 1))
 
         self.bn_f2 = nn.BatchNorm3d(64)
@@ -121,8 +128,8 @@ class SlowFastLayers(nn.Module):
         self.conv_f2s = nn.Conv3d(
             32,
             64,
-            kernel_size=[3, 1, 1],
-            stride=[3, 1, 1],
+            kernel_size=[1, 1, 1],
+            stride=[1, 1, 1],
             padding=[0, 0, 0],
             bias=False,
         )
@@ -166,17 +173,17 @@ class SegmentationModel(nn.Module):
     def __init__(self, device, slow_pathway_size, fast_pathway_size):
         super(SegmentationModel, self).__init__()
         self.device = device
-        self.feature_extractor = FeatureExtractor(name='resnet_18')
+        self.feature_extractor = FeatureExtractor(name='maskrcnn_resnet50_fpn')
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
 
         self.slow_fast = SlowFastLayers(self.feature_extractor.output_size)
 
-        mask_roi_pool = RoIAlign(output_size=14, spatial_scale=0.11, sampling_ratio=2)  # Can be checked again to make sure spatial_scale is correct
+        mask_roi_pool = RoIAlign(output_size=14, spatial_scale=0.0625, sampling_ratio=2)  # Can be checked again to make sure spatial_scale is correct
 
         mask_layers = (256, 256, 256, 256)
         mask_dilation = 1
-        mask_head = MaskRCNNHeads(576, mask_layers, mask_dilation)  # 1088
+        mask_head = MaskRCNNHeads(832, mask_layers, mask_dilation)  # 1088
 
         mask_predictor_in_channels = 256  # == mask_layers[-1]
         mask_dim_reduced = 256
@@ -246,9 +253,9 @@ class SegmentationModel(nn.Module):
                 continue
             batch_slow_output_features, batch_fast_output_features = self.slow_fast(torch.stack(slow_valid_features), torch.stack(fast_valid_features))
             # directly pass image features of middle frame as well # TODO Try this
-            # orig_resnet_features = torch.stack(slow_valid_features)[:, :,
-            #                        self.slow_pathway_size // 2:self.slow_pathway_size // 2 + 1, :, :]
-            merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features],  # orig_resnet_features
+            orig_resnet_features = torch.stack(slow_valid_features)[:, :,
+                                   self.slow_pathway_size // 2:self.slow_pathway_size // 2 + 1, :, :]
+            merged_features = torch.cat([batch_slow_output_features, batch_fast_output_features, orig_resnet_features],  # orig_resnet_features
                                         dim=1)[:, :, 0, :, :]
 
             image_sizes = [tuple(x.shape[2:4])] * len(merged_features)

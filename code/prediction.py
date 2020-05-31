@@ -11,13 +11,13 @@ from helpers.utils import intersection_over_union, convert_mask_pred_to_ground_t
 
 def predict_and_visualize():
     slow_pathway_size = 4
-    fast_pathway_size = 16
+    fast_pathway_size = 4
     overlap = fast_pathway_size // 2
     means = [0.485, 0.456, 0.406]
     stds = [0.229, 0.224, 0.225]
     transforms = Compose([ToTensor(), Normalize(mean=means,
                                                 std=stds)])
-    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=200,
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=200,
                            fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=1)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')

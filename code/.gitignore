@@ -1,10 +1,7 @@
 /data/
 .idea/code.iml
-.idea/deployment.xml
 .idea/inspectionProfiles
-.idea/misc.xml
-.idea/modules.xml
-.idea/vcs.xml
-.idea/workspace.xml
+.idea/*.xml
 /maskrcnn/PennFudanPed/
 /maskrcnn/maskrcnn_model_5.pth
+/maskrcnn/results/

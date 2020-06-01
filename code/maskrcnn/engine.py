@@ -116,7 +116,7 @@ def evaluate(model, data_loader, device):
         ax.set_axis_off()
         ax.imshow(img)
         count += 1
-        mask_count = 5
+        mask_count = 3
         for box, mask_tensor in zip(outputs[0]['boxes'], outputs[0]['masks']):  # Wont work when not using gt_boxes because we can have less boxes than masks
             box = box.int().tolist()
             mask = ((mask_tensor[0].cpu().numpy().astype(np.float)) >= 0.5).astype(np.float)
@@ -132,7 +132,7 @@ def evaluate(model, data_loader, device):
                 break
 
         plt.savefig(f'data/{count}.png')
-        plt_needed = False
+        plt.clf()
 
         model_time = time.time() - model_time
 

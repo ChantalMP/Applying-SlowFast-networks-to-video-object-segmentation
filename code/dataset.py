@@ -8,6 +8,7 @@ from torch.utils.data import Dataset, DataLoader
 import matplotlib.patches as patches
 import torch
 from math import ceil
+from tqdm import tqdm
 
 
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py
@@ -28,7 +29,7 @@ class DAVISDataset(Dataset):
             tmp = f.readlines()
         sequences_names = [x.strip() for x in tmp]
         self.sequences = defaultdict(dict)
-
+        global_image_id = 0
         for seq in sequences_names:
             images = np.sort(glob(os.path.join(self.img_path, seq, '*.jpg'))).tolist()
             self.sequences[seq]['images'] = images
@@ -38,7 +39,7 @@ class DAVISDataset(Dataset):
 
         self.data = []  # padding is a tuple like (False,False) first one indicates need to append before the sequence, second one after the sequence
         # create actual data instead of paths, and compute bboxes
-        for seq in self.sequences:
+        for seq in tqdm(self.sequences, total=len(self.sequences), desc='Preparing Sequences'):
             imgs = []
             masks = []
             boxes = []
@@ -48,12 +49,8 @@ class DAVISDataset(Dataset):
                 i.e. mini-batches of 3-channel RGB images of shape (3 x H x W), where H and W are expected to be at least 224. 
                 The images have to be loaded in to a range of [0, 1] and then normalized using mean = [0.485, 0.456, 0.406] and std = [0.229, 0.224, 0.225].'''
                 image = Image.open(img)
-                img_size = 400
-                aspect_ratio = image.size[0] / image.size[1]
-                image = image.resize((int(img_size * aspect_ratio), img_size), Image.ANTIALIAS)
                 image = np.array(image)
                 mask = Image.open(msk)
-                mask = mask.resize((int(img_size * aspect_ratio), img_size), Image.ANTIALIAS)
                 mask = np.array(mask)
                 imgs.append(image)
 
@@ -68,13 +65,14 @@ class DAVISDataset(Dataset):
                 img_masks = []
                 img_boxes = []
                 for i in range(num_objs):
-                    img_masks.append(binary_masks[i])
                     pos = np.where(binary_masks[i])
                     xmin = np.min(pos[1])
                     xmax = np.max(pos[1])
                     ymin = np.min(pos[0])
                     ymax = np.max(pos[0])
-                    img_boxes.append(np.array([xmin, ymin, xmax, ymax]))
+                    if xmin < xmax and ymin < ymax:
+                        img_boxes.append([xmin, ymin, xmax, ymax])
+                        img_masks.append(binary_masks[i])
 
                 masks.append(img_masks)
                 boxes.append(img_boxes)
@@ -86,26 +84,40 @@ class DAVISDataset(Dataset):
                 batch_masks = masks[start_idx:start_idx + self.max_seq_length]
                 batch_boxes = boxes[start_idx:start_idx + self.max_seq_length]
                 start_idx += self.max_seq_length - self.fast_pathway_size
-
                 padding = (idx == 0, idx + 1 == ceil(seq_len / self.max_seq_length))
-                self.data.append((batch_imgs, batch_masks, batch_boxes, padding))
+
+                batch_targets = []
+                for i in range(len(batch_imgs)):
+                    target = {}
+                    if len(batch_boxes[i]) == 0:
+                        batch_targets.append(target)
+                        continue
+                    bxs = torch.as_tensor(batch_boxes[i], dtype=torch.float32)
+                    target["boxes"] = bxs
+                    target["labels"] = torch.ones((len(bxs),), dtype=torch.int64)
+                    target["masks"] = torch.as_tensor(batch_masks[i], dtype=torch.uint8)
+                    target["image_id"] = torch.tensor([global_image_id])
+                    global_image_id += 1
+                    target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
+                    target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
+
+                    batch_targets.append(target)
+
+                self.data.append((batch_imgs, tuple(batch_targets), padding))
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, i):
-        imgs, masks, boxes, padding = self.data[i]
+        imgs, targets, padding = self.data[i]
         if self.transforms:
             transformed_imgs = []
             for img in imgs:
                 transformed_imgs.append(self.transforms(img))
 
-            return transformed_imgs, masks, boxes, padding
+            return transformed_imgs, targets, padding
 
-        return imgs, masks, boxes, padding
-
-    def custom_transformation(self, img, mask):  # TODO custom data augmentation to avoid overfitting
-        pass
+        return imgs, targets, padding
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt

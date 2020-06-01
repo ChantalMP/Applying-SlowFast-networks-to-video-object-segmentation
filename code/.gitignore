@@ -7,3 +7,4 @@
 .idea/vcs.xml
 .idea/workspace.xml
 /maskrcnn/PennFudanPed/
+/maskrcnn/maskrcnn_model_5.pth

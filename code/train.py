@@ -26,22 +26,27 @@ from torchvision.transforms import Compose, ToTensor, Normalize
 from tqdm import tqdm
 from helpers.evaluation import evaluate
 from torch.utils.tensorboard import SummaryWriter
-from helpers.utils import get_linear_schedule_with_warmup
+
+'''
+New architecture proposal:
+Fully train a maskrcnn for davis
+Use its transformations and backbone to extract fpn features for every image and save it
+Enchance features with temporal context
+Use its heads but this time with enchaned features
+'''
+
 
 def main():
-    # TODO next steps: Read Davis papers, try to overfit to many sequences (2-3-4-5)
-    epochs = 50
-    max_lr = 0.1
+    epochs = 2
+    max_lr = 0.001
     logging_frequency = 100
     slow_pathway_size = 4
     fast_pathway_size = 4
-    # TODO do we need to classes? Background and person?
 
-    transforms = Compose([ToTensor(), Normalize(mean=[0.485, 0.456, 0.406],
-                                                std=[0.229, 0.224, 0.225])])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=16,
+    transforms = Compose([ToTensor()])
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=40,
                            fast_pathway_size=fast_pathway_size)
-    dataloader = DataLoader(dataset, batch_size=1)
+    dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
                                                  fast_pathway_size=fast_pathway_size)
@@ -55,46 +60,44 @@ def main():
 
     # opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
     opt = torch.optim.SGD(model.parameters(), lr=max_lr, momentum=0.9)
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=max_lr, steps_per_epoch=len(dataloader), epochs=epochs)
+    # scheduler = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=max_lr, steps_per_epoch=len(dataloader), epochs=epochs)
 
     writer: SummaryWriter = SummaryWriter()
     global_step = 0
     best_iou = -1
 
-    for epoch in tqdm(range(epochs), total=epochs, desc="Epoch:"):
+    for epoch in tqdm(range(epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         count = 0
-        for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequence:"):
+        for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
             model.train()
-            imgs, gt_masks, boxes, padding = seq
-            imgs = torch.cat(imgs).to(device)
-            loss = model(imgs, boxes, gt_masks, padding)
-            total_loss += loss.item()
-            count += imgs.shape[0] - (int(padding[0]) * 8) - (int(padding[1]) * 8)
-            loss.backward()
+            imgs, targets, padding = seq
+            loss_dict, _ = model(imgs, targets, padding)
+            losses = sum(loss for loss in loss_dict.values())
+            total_loss += losses.item()
+            # count += imgs.shape[0] - (int(padding[0]) * 8) - (int(padding[1]) * 8)
+            losses.backward()
             opt.step()
-            scheduler.step()
+            # scheduler.step()
             opt.zero_grad()
             global_step += 1
 
-            current_lr = scheduler.get_last_lr()[0]
-            writer.add_scalar('Learning Rate', current_lr, global_step=global_step)
+            # current_lr = scheduler.get_last_lr()[0]
+            # writer.add_scalar('Learning Rate', current_lr, global_step=global_step)
 
             if idx % logging_frequency == 0:
-                total_loss = total_loss / count
                 print(f'\nLoss: {total_loss:.4f}\n')
 
-                print(f'\nLr: {current_lr:.7f}')
+                # print(f'\nLr: {current_lr:.7f}')
                 writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
                 total_loss = 0.
-                count = 0
-
-                val_iou, val_loss = evaluate(model, device, writer=writer, global_step=global_step)
+                #
+                val_iou = evaluate(model, device, writer=writer, global_step=global_step)
 
                 if val_iou > best_iou:
                     best_iou = val_iou
                     print(f'Saving model with iou: {val_iou}')
-                    torch.save(model.state_dict(), "models/model_best_onecycle_scheduler_resnet18_bn.pth")
+                    torch.save(model.state_dict(), "models/model_maskrcnn_best.pth")
 
     torch.save(model.state_dict(), "models/model.pth")
 

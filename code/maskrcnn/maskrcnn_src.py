@@ -10,8 +10,6 @@ from pathlib import Path
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
-from torchvision.models.detection import MaskRCNN
-from torchvision.models.detection.rpn import AnchorGenerator
 
 from engine import train_one_epoch, evaluate
 import utils

@@ -11,9 +11,9 @@ from copy import deepcopy
 
 
 def evaluate(model, device, writer=None, global_step=None):
-    # overlap = model.fast_pathway_size // 2
+    overlap = model.fast_pathway_size // 2
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=50,
+    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=500,
                            fast_pathway_size=16)
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
@@ -25,21 +25,14 @@ def evaluate(model, device, writer=None, global_step=None):
         imgs, targets, padding = seq
         with torch.no_grad():
             _, detections = model(imgs, deepcopy(targets), padding)
-        # count += imgs.shape[0] - (int(padding[0]) * overlap) - (int(padding[1]) * overlap)
-        # with torch.no_grad():
-        #     loss, output = model(imgs, boxes, gt_masks, padding)
-        #     total_loss += loss.item()
-        #     preds.extend(output)
 
         # imgs can contain padding values not predicted by the model, delete them
-        # if not padding[0].item():
-        #     imgs = imgs[overlap:]
-        #     gt_masks = gt_masks[overlap:]
-        #     boxes = boxes[overlap:]
-        # if not padding[1].item():
-        #     imgs = imgs[:-overlap]
-        #     gt_masks = gt_masks[:-overlap]
-        #     boxes = boxes[:-overlap]
+        if not padding[0]:
+            imgs = imgs[overlap:]
+            targets = targets[overlap:]
+        if not padding[1]:
+            imgs = imgs[:-overlap]
+            targets = targets[:-overlap]
 
         plt_needed = False
         for img_idx, target in enumerate(targets):

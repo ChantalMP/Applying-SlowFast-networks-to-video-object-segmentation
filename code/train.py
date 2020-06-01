@@ -37,14 +37,14 @@ Use its heads but this time with enchaned features
 
 
 def main():
-    epochs = 2
-    max_lr = 0.001
+    epochs = 10
+    lr = 0.0005
     logging_frequency = 100
     slow_pathway_size = 4
     fast_pathway_size = 4
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=40,
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=500,  # TODO maybe we don't even need this?
                            fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -58,9 +58,8 @@ def main():
     total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f'{total_trainable_params:,} training parameters.')
 
-    # opt = torch.optim.AdamW(params=model.parameters(), lr=lr)
-    opt = torch.optim.SGD(model.parameters(), lr=max_lr, momentum=0.9)
-    # scheduler = torch.optim.lr_scheduler.OneCycleLR(opt, max_lr=max_lr, steps_per_epoch=len(dataloader), epochs=epochs)
+    opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    # TODO maybe scheduler
 
     writer: SummaryWriter = SummaryWriter()
     global_step = 0
@@ -68,38 +67,26 @@ def main():
 
     for epoch in tqdm(range(epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
-        count = 0
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
             model.train()
             imgs, targets, padding = seq
-            loss_dict, _ = model(imgs, targets, padding)
-            losses = sum(loss for loss in loss_dict.values())
-            total_loss += losses.item()
-            # count += imgs.shape[0] - (int(padding[0]) * 8) - (int(padding[1]) * 8)
-            losses.backward()
-            opt.step()
-            # scheduler.step()
-            opt.zero_grad()
-            global_step += 1
+            batch_loss, _ = model(imgs, targets, padding, optimizer=opt)  # Backward happens inside
+            total_loss += batch_loss
 
-            # current_lr = scheduler.get_last_lr()[0]
-            # writer.add_scalar('Learning Rate', current_lr, global_step=global_step)
+            global_step += 1
 
             if idx % logging_frequency == 0:
                 print(f'\nLoss: {total_loss:.4f}\n')
-
-                # print(f'\nLr: {current_lr:.7f}')
                 writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
                 total_loss = 0.
-                #
                 val_iou = evaluate(model, device, writer=writer, global_step=global_step)
 
                 if val_iou > best_iou:
                     best_iou = val_iou
                     print(f'Saving model with iou: {val_iou}')
-                    torch.save(model.state_dict(), "models/model_maskrcnn_best.pth")
+                    torch.save(model.state_dict(), "models/model_maskrcnn_best_slowfast.pth")
 
-    torch.save(model.state_dict(), "models/model.pth")
+    torch.save(model.state_dict(), "models/model_slowfast.pth")
 
 
 if __name__ == '__main__':

@@ -80,12 +80,13 @@ def get_model_instance_segmentation(num_classes):
 
 
 class SlowFastLayers(nn.Module):
-    def __init__(self, input_size, device):
-        # TODO consider no padding
+    def __init__(self, input_size, device, slow_pathway_size, fast_pathway_size):
         super(SlowFastLayers, self).__init__()
         self.device = device
+        self.slow_pathway_size = slow_pathway_size
+        self.fast_pathway_size = fast_pathway_size
         self.fast_conv1 = nn.Conv3d(
-            in_channels=input_size,  # 1280 for efficientnet, 512 for resnet
+            in_channels=input_size,
             out_channels=32,
             kernel_size=(2, 3, 3),
             padding=(0, 1, 1))
@@ -170,6 +171,9 @@ class SlowFastLayers(nn.Module):
             key_scale_slow_features, key_scale_fast_features = self.forward(key_scale_slow_features, key_scale_fast_features)
 
             merged_features[key] = torch.cat([key_scale_slow_features, key_scale_fast_features], dim=1)[:, :, 0, :, :]
+            del key_scale_slow_features, key_scale_fast_features
+            # For residual learning add original image features to merged features
+            merged_features[key] += torch.stack(slow_features[key]).transpose(1, 2)[:, :, self.slow_pathway_size // 2].to(self.device)
 
         return merged_features
 
@@ -216,9 +220,9 @@ class SegmentationModel(nn.Module):
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
 
-        self.slow_fast = SlowFastLayers(256, device=device)
+        self.slow_fast = SlowFastLayers(256, device=device, slow_pathway_size=slow_pathway_size, fast_pathway_size=fast_pathway_size)
 
-        self.bs = 3
+        self.bs = 2
         self.maskrcnn_bs = 8
 
     @torch.no_grad()

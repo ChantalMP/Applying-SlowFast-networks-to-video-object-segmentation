@@ -25,7 +25,9 @@ import torch
 from torchvision.transforms import Compose, ToTensor, Normalize
 from tqdm import tqdm
 from helpers.evaluation import evaluate
+from helpers.utils import get_linear_schedule_with_warmup
 from torch.utils.tensorboard import SummaryWriter
+from constants import best_model_path, model_path
 
 '''
 New architecture proposal:
@@ -36,15 +38,25 @@ Use its heads but this time with enchaned features
 '''
 
 
-def main():
+def main():  # TODO support for uneven pathsizes? also support no temporal encancing
+    # TODO to run on colab we can test on speedy to make sure it never exceeds 12 gb. Loading the data itself might already be too much?\
+    # TODO main data loading in get_item. For now ignore max_seq_length
+    # TODO floor and ceil
+    '''
+    Train till convergence:
+    1. Without temporal context
+    2. With but slow fast same size (as big as it fits)
+    3. Smaller slow but bigger fast
+
+    :return:
+    '''
     epochs = 10
-    lr = 0.0005
-    logging_frequency = 100
+    lr = 0.001
     slow_pathway_size = 4
     fast_pathway_size = 4
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=500,  # TODO maybe we don't even need this?
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=500,
                            fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -57,9 +69,10 @@ def main():
     print(f'{total_params:,} total parameters.')
     total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f'{total_trainable_params:,} training parameters.')
+    total_steps = epochs * len(dataloader)
 
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
-    # TODO maybe scheduler
+    scheduler = get_linear_schedule_with_warmup(opt, num_warmup_steps=total_steps // 10, num_training_steps=total_steps)
 
     writer: SummaryWriter = SummaryWriter()
     global_step = 0
@@ -71,22 +84,22 @@ def main():
             model.train()
             imgs, targets, padding = seq
             batch_loss, _ = model(imgs, targets, padding, optimizer=opt)  # Backward happens inside
+            scheduler.step()
+            current_lr = scheduler.get_last_lr()[0]
+            writer.add_scalar('Learning Rate', current_lr, global_step=global_step)
             total_loss += batch_loss
 
             global_step += 1
 
-            if idx % logging_frequency == 0:
-                print(f'\nLoss: {total_loss:.4f}\n')
-                writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
-                total_loss = 0.
-                val_iou = evaluate(model, device, writer=writer, global_step=global_step)
+        print(f'\nLoss: {total_loss:.4f}\n')
+        writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
+        val_iou = evaluate(model, device, writer=writer, global_step=global_step)
+        if val_iou > best_iou:
+            best_iou = val_iou
+            print(f'Saving model with iou: {val_iou}')
+            torch.save(model.state_dict(), best_model_path)
 
-                if val_iou > best_iou:
-                    best_iou = val_iou
-                    print(f'Saving model with iou: {val_iou}')
-                    torch.save(model.state_dict(), "models/model_maskrcnn_best_slowfast.pth")
-
-    torch.save(model.state_dict(), "models/model_slowfast.pth")
+    torch.save(model.state_dict(), model_path)
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from helpers.utils import convert_mask_pred_to_ground_truth_format, intersection_over_union, revert_normalization
 from copy import deepcopy
+from constants import eval_output_path
 
 
 def evaluate(model, device, writer=None, global_step=None):
@@ -68,7 +69,7 @@ def evaluate(model, device, writer=None, global_step=None):
                         plotted = True
 
             if plt_needed:
-                plt.savefig(f'data/output/eval_output/{seq_idx}_{img_idx}.png')
+                plt.savefig(eval_output_path / f'{seq_idx}_{img_idx}.png')
                 plt.clf()
                 plt_needed = False
 
@@ -78,9 +79,8 @@ def evaluate(model, device, writer=None, global_step=None):
     print(f'\nMean_IoU: {mean_iou:.4f}\n'
           f'Median_IoU: {median_iou:.4f}\n')
 
-    # if writer is not None and global_step is not None:
-    #     writer.add_scalar('Loss/Val', total_loss, global_step=global_step)
-    #     writer.add_scalar('IoU/Mean', mean_iou, global_step=global_step)
-    #     writer.add_scalar('IoU/Median', median_iou, global_step=global_step)
+    if writer is not None and global_step is not None:
+        writer.add_scalar('IoU/Mean', mean_iou, global_step=global_step)
+        writer.add_scalar('IoU/Median', median_iou, global_step=global_step)
 
     return mean_iou

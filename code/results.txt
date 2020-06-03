@@ -1,0 +1,2 @@
+Maskrcnn default: 70.8 mean ~80 median
+With 3d convs:Mean_IoU: 0.7101 Median_IoU: 0.7979

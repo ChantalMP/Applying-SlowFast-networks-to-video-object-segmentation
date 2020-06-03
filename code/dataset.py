@@ -15,7 +15,7 @@ from tqdm import tqdm
 # Reference how to compute the bounding boxes: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 
 class DAVISDataset(Dataset):
-    def __init__(self, root, subset='train', resolution='480p', transforms=None, max_seq_length=40, fast_pathway_size=16):
+    def __init__(self, root, subset='train', resolution='480p', transforms=None, max_seq_length=400, fast_pathway_size=16):
         self.root = root
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)

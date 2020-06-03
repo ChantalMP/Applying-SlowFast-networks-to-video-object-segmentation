@@ -8,6 +8,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 from PIL import Image
 from helpers.utils import intersection_over_union, convert_mask_pred_to_ground_truth_format, revert_normalization
+from constants import best_model_path, pred_output_path
 
 def predict_and_visualize():
     slow_pathway_size = 4
@@ -24,7 +25,7 @@ def predict_and_visualize():
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
                                                  fast_pathway_size=fast_pathway_size)
     model.to(device)
-    model.load_state_dict(torch.load("models/model_best_onecycle_scheduler_resnet18_bn.pth"))
+    model.load_state_dict(torch.load(best_model_path))
 
     for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequence:"):
         model.eval()
@@ -66,7 +67,7 @@ def predict_and_visualize():
                 mask_idx +=1
                 ax.imshow(full_mask, alpha=0.3)
 
-            plt.savefig(f'data/output/pred_output/{mask_idx}.png')
+            plt.savefig(pred_output_path / f'{mask_idx}.png')
 
 
 if __name__ == '__main__':

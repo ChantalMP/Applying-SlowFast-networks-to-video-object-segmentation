@@ -1,12 +1,7 @@
-from math import ceil
+from math import ceil, floor
 import types
 import torch
 from torch import nn
-# from roi_heads_custom import RoIHeads
-# from torchvision.ops import RoIAlign
-# from torchvision.models.detection.mask_rcnn import MaskRCNNHeads, MaskRCNNPredictor
-# from efficientnet_pytorch import EfficientNet
-# from torchvision import models
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
@@ -85,27 +80,33 @@ class SlowFastLayers(nn.Module):
         self.device = device
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
+
+        kernel_size_slow1 = ceil(self.slow_pathway_size / 2)
+        kernel_size_fast1 = ceil(self.fast_pathway_size / 2)
+        kernel_size_slow2 = kernel_size_slow1 + 1 if self.slow_pathway_size % 2 == 0 else kernel_size_slow1
+        kernel_size_fast2 = kernel_size_fast1 + 1 if self.slow_pathway_size % 2 == 0 else kernel_size_fast1
+        kernel_size_f2s = kernel_size_fast2 - kernel_size_slow2 + 1
+
         self.fast_conv1 = nn.Conv3d(
             in_channels=input_size,
             out_channels=32,
-            kernel_size=(2, 3, 3),
+            kernel_size=(kernel_size_fast1, 3, 3),
             padding=(0, 1, 1))
 
         self.bn_f1 = nn.BatchNorm3d(32)
 
         self.slow_conv1 = nn.Conv3d(
             in_channels=input_size,
-            out_channels=224,
-            kernel_size=(2, 3, 3),
+            out_channels=192,
+            kernel_size=(kernel_size_slow1, 3, 3),
             padding=(0, 1, 1))
-        # TODO maybe with stride
 
-        self.bn_s1 = nn.BatchNorm3d(224)
+        self.bn_s1 = nn.BatchNorm3d(192)
 
         self.fast_conv2 = nn.Conv3d(
             in_channels=32,
             out_channels=32,
-            kernel_size=(3, 3, 3),
+            kernel_size=(kernel_size_fast2, 3, 3),
             padding=(0, 1, 1))
 
         self.bn_f2 = nn.BatchNorm3d(32)
@@ -113,7 +114,7 @@ class SlowFastLayers(nn.Module):
         self.slow_conv2 = nn.Conv3d(
             in_channels=256,
             out_channels=224,
-            kernel_size=(3, 3, 3),
+            kernel_size=(kernel_size_slow2, 3, 3),
             padding=(0, 1, 1)
         )
 
@@ -121,14 +122,14 @@ class SlowFastLayers(nn.Module):
 
         self.conv_f2s = nn.Conv3d(
             32,
-            32,
-            kernel_size=[1, 1, 1],
+            64,
+            kernel_size=[kernel_size_f2s, 1, 1],
             stride=[1, 1, 1],
             padding=[0, 0, 0],
             bias=False,
         )
 
-        self.bn_f2s = nn.BatchNorm3d(32)
+        self.bn_f2s = nn.BatchNorm3d(64)
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -170,37 +171,12 @@ class SlowFastLayers(nn.Module):
             key_scale_fast_features = torch.stack(fast_features[key]).to(self.device).transpose(1, 2)
             key_scale_slow_features, key_scale_fast_features = self.forward(key_scale_slow_features, key_scale_fast_features)
 
-            merged_features[key] = torch.cat([key_scale_slow_features, key_scale_fast_features], dim=1)[:, :, 0, :, :]
+            merged_features[key] = torch.cat([key_scale_slow_features, key_scale_fast_features], dim=1).squeeze(dim=2)
             del key_scale_slow_features, key_scale_fast_features
             # For residual learning add original image features to merged features
             merged_features[key] += torch.stack(slow_features[key]).transpose(1, 2)[:, :, self.slow_pathway_size // 2].to(self.device)
 
         return merged_features
-
-
-'''Padding at beginning and end of the sequence (we do not have real neighbouring feature maps there)'''
-
-
-def apply_padding(image_features, targets, padding, overlap):
-    if padding is not None:
-        if padding[0]:
-            for key, image_feature in image_features.items():
-                image_features[key] = torch.cat(
-                    [torch.zeros_like(image_feature[:1, :, :, :].repeat(overlap, 1, 1, 1)), image_feature])
-
-        else:  # As those targets correspond to imges only used for padding, we don't need them
-            if targets is not None:
-                targets = targets[overlap:]
-
-        if padding[1]:
-            for key, image_feature in image_features.items():
-                image_features[key] = torch.cat(
-                    [image_feature, torch.zeros_like(image_feature[:1, :, :, :].repeat(overlap, 1, 1, 1))])
-        else:
-            if targets is not None:
-                targets = targets[:-overlap]
-
-    return image_features, targets
 
 
 class SegmentationModel(nn.Module):
@@ -247,25 +223,31 @@ class SegmentationModel(nn.Module):
     def _slice_features(self, features: OrderedDict, image_feature_idx, pathway_size):
         batch_features = OrderedDict()
         for key, value in features.items():
-            batch_features[key] = value[image_feature_idx - pathway_size // 2:image_feature_idx + pathway_size // 2]
+            batch_features[key] = value[image_feature_idx - floor(pathway_size / 2):image_feature_idx + ceil(
+                pathway_size / 2)]
 
         return batch_features
-
-    def _slice_targets(self, targets, i):
-        batch_targets = targets[i * self.bs:(i + 1) * self.bs]
-        for batch_target in batch_targets:
-            for key, value in batch_target.items():
-                batch_target[key] = value.to(self.device)
-
-        return batch_targets
 
     def _targets_to_device(self, targets, device):
         for i in range(len(targets)):
             for key, value in targets[i].items():
-                targets[i][key] = value.to(self.device)
+                targets[i][key] = value.to(device)
 
-    def forward(self, images, targets=None, padding=None, optimizer=None):
-        overlap = self.fast_pathway_size // 2
+    '''Padding at beginning and end of the sequence (we do not have real neighbouring feature maps there)'''
+
+    def apply_padding(self, image_features):
+        padding_count = self.fast_pathway_size // 2
+        for key, image_feature in image_features.items():
+            image_features[key] = torch.cat(
+                [torch.zeros_like(image_feature[:1, :, :, :].repeat(padding_count, 1, 1, 1)), image_feature])
+
+        for key, image_feature in image_features.items():
+            image_features[key] = torch.cat(
+                [image_feature, torch.zeros_like(image_feature[:1, :, :, :].repeat(padding_count, 1, 1, 1))])
+
+        return image_features
+
+    def forward(self, images, targets=None, optimizer=None):
         # padding is a tuple like (False,False) first one indicates need to append before the sequence, second one after the sequence
 
         original_image_sizes = []
@@ -276,22 +258,24 @@ class SegmentationModel(nn.Module):
         transformed_images, _ = self.maskrcnn_model.transform(images)
         image_features = self.compute_maskrcnn_features(transformed_images.tensors)
 
-        image_features, targets = apply_padding(image_features, targets, padding, overlap)
 
         '''Deal with imgs that have no objects in them'''
         valid_features_mask = []
         valid_targets = []
         valid_imgs = []
-        for idx in range(overlap, len(image_features['0']) - overlap):
-            if 'boxes' not in targets[idx - overlap] or len(targets[idx - overlap]['boxes']) == 0:  # If no box predictions just skip
+        for idx in range(len(image_features['0'])):
+            if 'boxes' not in targets[idx] or len(targets[idx]['boxes']) == 0:  # If no box predictions just skip
                 valid_features_mask.append(0)
                 continue
             else:
                 valid_features_mask.append(1)
-                valid_targets.append(targets[idx - overlap])
-                valid_imgs.append(images[idx - overlap])
+                valid_targets.append(targets[idx])
+                valid_imgs.append(images[idx])
 
         _, targets = self.maskrcnn_model.transform(valid_imgs, valid_targets)
+        del valid_imgs, valid_targets
+
+        image_features = self.apply_padding(image_features)
         images = transformed_images
         full_targets = []
         pointer = 0
@@ -314,7 +298,7 @@ class SegmentationModel(nn.Module):
             batch_targets = []
             for feature_idx in feature_idxs:
                 if valid_features_mask[feature_idx] == 1:
-                    image_feature_idx = feature_idx + overlap
+                    image_feature_idx = feature_idx + self.fast_pathway_size // 2
                     # right now slow sees the middle 4 frames, we should consider the option of seeing 4 frames through skipping
                     slow_valid_features.append(self._slice_features(image_features, image_feature_idx, self.slow_pathway_size))
                     fast_valid_features.append(self._slice_features(image_features, image_feature_idx, self.fast_pathway_size))

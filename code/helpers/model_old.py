@@ -173,7 +173,7 @@ class SlowFastLayers(nn.Module):
             merged_features[key] = torch.cat([key_scale_slow_features, key_scale_fast_features], dim=1)[:, :, 0, :, :]
             del key_scale_slow_features, key_scale_fast_features
             # For residual learning add original image features to merged features
-            merged_features[key] += torch.stack(slow_features[key]).transpose(1, 2)[:, :, self.slow_pathway_size // 2].to(self.device)
+            # merged_features[key] += torch.stack(slow_features[key]).transpose(1, 2)[:, :, self.slow_pathway_size // 2].to(self.device)
 
         return merged_features
 
@@ -264,7 +264,7 @@ class SegmentationModel(nn.Module):
             for key, value in targets[i].items():
                 targets[i][key] = value.to(self.device)
 
-    def forward(self, images, targets=None, padding=None, optimizer=None):
+    def forward(self, images, targets=None, padding=(True, True), optimizer=None):
         overlap = self.fast_pathway_size // 2
         # padding is a tuple like (False,False) first one indicates need to append before the sequence, second one after the sequence
 

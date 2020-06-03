@@ -8,10 +8,10 @@ from matplotlib import pyplot as plt
 import numpy as np
 from helpers.utils import intersection_over_union
 from copy import deepcopy
-from helpers.constants import eval_output_path
+from helpers.constants import eval_output_path, model_name, pred_output_path
 
 
-def evaluate(model, writer=None, global_step=None):
+def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=None)
@@ -62,10 +62,16 @@ def evaluate(model, writer=None, global_step=None):
                     ax.imshow(full_mask, alpha=0.3)
                     plotted_count += 1
                     if plotted_count == len(target['masks']):
-                        plotted = True
+                        if not save_all_imgs:
+                            plotted = True
 
             if plt_needed:
-                plt.savefig(eval_output_path / f'{seq_idx}_{img_idx}.png')
+                if save_all_imgs:
+                    output_path = pred_output_path / model_name / seq_name
+                    output_path.mkdir(parents=True, exist_ok=True)
+                    plt.savefig(output_path / f'{seq_name}_{img_idx}.png')
+                else:
+                    plt.savefig(eval_output_path / f'{seq_name}_{img_idx}.png')
                 plt.clf()
                 plt_needed = False
 

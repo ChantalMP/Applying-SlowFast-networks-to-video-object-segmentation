@@ -2,7 +2,11 @@ Maskrcnn default: 70.8 mean ~80 median
 With 3d convs:Mean_IoU: 0.7101 Median_IoU: 0.7979
 
 Planned Experiments:
-without temporal dimension
-One test with and without identity
+without temporal dimensiom
+
+One test with and without identity:
+    Without identity (trained for 5 epochs): Mean_IoU: 0.7101 Mean_Hard_IoU: 0.6029
+    With identity (trained for 5 epochs): Mean_IoU: 0.7066 Mean_Hard_IoU: 0.5947
+
 One test with slow fast same and maximum
 Then: Reduce slow increase fast gradually in 2 steps

@@ -77,7 +77,6 @@ def main():
     for epoch in tqdm(range(epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
-            evaluate(model, writer=writer, global_step=global_step)
             model.train()
             imgs, targets, _ = seq
             batch_loss, _ = model(imgs, targets, optimizer=opt)  # Backward happens inside

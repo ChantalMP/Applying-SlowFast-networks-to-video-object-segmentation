@@ -1,39 +1,33 @@
 from torch.utils.data import DataLoader
 import statistics
-from dataset import DAVISDataset
+from helpers.dataset import DAVISDataset
 import torch
-from torchvision.transforms import Compose, ToTensor, Normalize
+from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import numpy as np
-from helpers.utils import convert_mask_pred_to_ground_truth_format, intersection_over_union, revert_normalization
+from helpers.utils import intersection_over_union
 from copy import deepcopy
-from constants import eval_output_path
+from helpers.constants import eval_output_path
 
 
-def evaluate(model, device, writer=None, global_step=None):
-    overlap = model.fast_pathway_size // 2
+def evaluate(model, writer=None, global_step=None):
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, max_seq_length=500,
-                           fast_pathway_size=16)
+    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
 
+    with open('data/DAVIS/ImageSets/2017/hard_val.txt', 'r') as f:
+        hard_sequences = set(f.read().splitlines())
+
     intersection_over_unions = []
+    intersection_over_unions_hard = []
     for seq_idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Evaluating with Sequence:"):
         plotted = False
 
-        imgs, targets, padding = seq
+        imgs, targets, seq_name = seq
         with torch.no_grad():
-            _, detections = model(imgs, deepcopy(targets), padding)
-
-        # imgs can contain padding values not predicted by the model, delete them
-        if not padding[0]:
-            imgs = imgs[overlap:]
-            targets = targets[overlap:]
-        if not padding[1]:
-            imgs = imgs[:-overlap]
-            targets = targets[:-overlap]
+            _, detections = model(imgs, deepcopy(targets))
 
         plt_needed = False
         for img_idx, target in enumerate(targets):
@@ -56,6 +50,8 @@ def evaluate(model, device, writer=None, global_step=None):
                 mask = (mask >= 0.5).astype(np.float)[0]
                 iou = intersection_over_union(gt_mask.cpu().numpy(), mask)
                 intersection_over_unions.append(iou)
+                if seq_name in hard_sequences:
+                    intersection_over_unions_hard.append(iou)
 
                 if not plotted:
                     full_mask = np.expand_dims(mask, axis=-1).repeat(4, axis=-1)
@@ -74,13 +70,13 @@ def evaluate(model, device, writer=None, global_step=None):
                 plt_needed = False
 
     mean_iou = statistics.mean(intersection_over_unions)
-    median_iou = statistics.median(intersection_over_unions)
+    mean_iou_hard = statistics.mean(intersection_over_unions_hard)
 
     print(f'\nMean_IoU: {mean_iou:.4f}\n'
-          f'Median_IoU: {median_iou:.4f}\n')
+          f'Mean_Hard_IoU: {mean_iou_hard:.4f}\n')
 
     if writer is not None and global_step is not None:
         writer.add_scalar('IoU/Mean', mean_iou, global_step=global_step)
-        writer.add_scalar('IoU/Median', median_iou, global_step=global_step)
+        writer.add_scalar('IoU/Mean_Hard', mean_iou_hard, global_step=global_step)
 
     return mean_iou

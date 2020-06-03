@@ -1,14 +1,13 @@
 from torch.utils.data import DataLoader
-from dataset import DAVISDataset
-from model import SegmentationModel
+from helpers.dataset import DAVISDataset
+from helpers.model import SegmentationModel
 import torch
 from torchvision.transforms import Compose, ToTensor, Normalize
 from tqdm import tqdm
 from matplotlib import pyplot as plt
 import numpy as np
-from PIL import Image
 from helpers.utils import intersection_over_union, convert_mask_pred_to_ground_truth_format, revert_normalization
-from constants import best_model_path, pred_output_path
+from helpers.constants import best_model_path, pred_output_path
 
 def predict_and_visualize():
     slow_pathway_size = 4
@@ -18,9 +17,8 @@ def predict_and_visualize():
     stds = [0.229, 0.224, 0.225]
     transforms = Compose([ToTensor(), Normalize(mean=means,
                                                 std=stds)])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=200,
-                           fast_pathway_size=fast_pathway_size)
-    dataloader = DataLoader(dataset, batch_size=1)
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
+    dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
                                                  fast_pathway_size=fast_pathway_size)
@@ -30,21 +28,11 @@ def predict_and_visualize():
     for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequence:"):
         model.eval()
         preds = []
-        imgs, gt_masks, boxes, padding = seq
+        imgs, gt_masks, boxes = seq
         imgs = torch.cat(imgs).to(device)
         with torch.no_grad():
-            _, output = model(imgs, boxes, gt_masks, padding)
+            _, output = model(imgs, boxes, gt_masks)
             preds.extend(output)
-
-        # imgs can contain padding values not predicted by the model, delete them
-        if not padding[0].item():
-            imgs = imgs[overlap:]
-            gt_masks = gt_masks[overlap:]
-            boxes = boxes[overlap:]
-        if not padding[1].item():
-            imgs = imgs[:-overlap]
-            gt_masks = gt_masks[:-overlap]
-            boxes = boxes[:-overlap]
 
         mask_idx = 0
         for img_idx, (img_boxes, img_gt_masks) in enumerate(zip(boxes, gt_masks)):

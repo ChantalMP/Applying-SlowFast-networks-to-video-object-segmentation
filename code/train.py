@@ -18,16 +18,16 @@
 
 # Evaluation
 # Slow rate of fast how is it etc etc.
-from dataset import DAVISDataset
+from helpers.dataset import DAVISDataset
 from torch.utils.data import DataLoader
-from model import SegmentationModel
+from helpers.model import SegmentationModel
 import torch
-from torchvision.transforms import Compose, ToTensor, Normalize
+from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
 from helpers.utils import get_linear_schedule_with_warmup
 from torch.utils.tensorboard import SummaryWriter
-from constants import best_model_path, model_path
+from helpers.constants import best_model_path, model_path
 
 '''
 New architecture proposal:
@@ -38,10 +38,7 @@ Use its heads but this time with enchaned features
 '''
 
 
-def main():  # TODO support for uneven pathsizes? also support no temporal encancing
-    # TODO to run on colab we can test on speedy to make sure it never exceeds 12 gb. Loading the data itself might already be too much?\
-    # TODO main data loading in get_item. For now ignore max_seq_length
-    # TODO floor and ceil
+def main():
     '''
     Train till convergence:
     1. Without temporal context
@@ -56,8 +53,7 @@ def main():  # TODO support for uneven pathsizes? also support no temporal encan
     fast_pathway_size = 4
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, max_seq_length=500,
-                           fast_pathway_size=fast_pathway_size)
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
@@ -81,9 +77,10 @@ def main():  # TODO support for uneven pathsizes? also support no temporal encan
     for epoch in tqdm(range(epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
+            evaluate(model, writer=writer, global_step=global_step)
             model.train()
-            imgs, targets, padding = seq
-            batch_loss, _ = model(imgs, targets, padding, optimizer=opt)  # Backward happens inside
+            imgs, targets, _ = seq
+            batch_loss, _ = model(imgs, targets, optimizer=opt)  # Backward happens inside
             scheduler.step()
             current_lr = scheduler.get_last_lr()[0]
             writer.add_scalar('Learning Rate', current_lr, global_step=global_step)
@@ -93,7 +90,7 @@ def main():  # TODO support for uneven pathsizes? also support no temporal encan
 
         print(f'\nLoss: {total_loss:.4f}\n')
         writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
-        val_iou = evaluate(model, device, writer=writer, global_step=global_step)
+        val_iou = evaluate(model, writer=writer, global_step=global_step)
         if val_iou > best_iou:
             best_iou = val_iou
             print(f'Saving model with iou: {val_iou}')

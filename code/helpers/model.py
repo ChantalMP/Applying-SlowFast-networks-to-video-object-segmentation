@@ -8,6 +8,7 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from collections import OrderedDict
 import torch.nn.functional as F
 from torchvision.ops import boxes as box_ops
+from helpers.constants import batch_size, maskrcnn_batch_size
 
 
 def postprocess_detections(self, class_logits, box_regression, proposals, image_shapes):
@@ -198,8 +199,8 @@ class SegmentationModel(nn.Module):
 
         self.slow_fast = SlowFastLayers(256, device=device, slow_pathway_size=slow_pathway_size, fast_pathway_size=fast_pathway_size)
 
-        self.bs = 2
-        self.maskrcnn_bs = 8
+        self.bs = batch_size
+        self.maskrcnn_bs = maskrcnn_batch_size
 
     @torch.no_grad()
     def compute_maskrcnn_features(self, images_tensors):
@@ -248,8 +249,6 @@ class SegmentationModel(nn.Module):
         return image_features
 
     def forward(self, images, targets=None, optimizer=None):
-        # padding is a tuple like (False,False) first one indicates need to append before the sequence, second one after the sequence
-
         original_image_sizes = []
         for img in images:
             val = img.shape[-2:]

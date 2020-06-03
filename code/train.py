@@ -27,7 +27,7 @@ from tqdm import tqdm
 from helpers.evaluation import evaluate
 from helpers.utils import get_linear_schedule_with_warmup
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path
+from helpers.constants import best_model_path, model_path, slow_pathway_size, fast_pathway_size
 
 '''
 New architecture proposal:
@@ -49,8 +49,6 @@ def main():
     '''
     epochs = 10
     lr = 0.001
-    slow_pathway_size = 4
-    fast_pathway_size = 4
 
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)

@@ -4,6 +4,7 @@ With 3d convs:Mean_IoU: 0.7101 Median_IoU: 0.7979
 Planned Experiments:
 without temporal dimensiom
 
+
 One test with and without identity:
     Without identity (trained for 5 epochs): Mean_IoU: 0.7101 Mean_Hard_IoU: 0.6029
     With identity (trained for 5 epochs): Mean_IoU: 0.7066 Mean_Hard_IoU: 0.5947

@@ -25,7 +25,6 @@ import torch
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
-from helpers.utils import get_linear_schedule_with_warmup
 from torch.utils.tensorboard import SummaryWriter
 from helpers.constants import best_model_path, model_path, slow_pathway_size, fast_pathway_size
 
@@ -44,11 +43,10 @@ def main():
     1. Without temporal context
     2. With but slow fast same size (as big as it fits)
     3. Smaller slow but bigger fast
-
-    :return:
     '''
     epochs = 10
     lr = 0.001
+    weight_decay = 0.0001
 
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
@@ -65,8 +63,7 @@ def main():
     print(f'{total_trainable_params:,} training parameters.')
     total_steps = epochs * len(dataloader)
 
-    opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
-    scheduler = get_linear_schedule_with_warmup(opt, num_warmup_steps=total_steps // 10, num_training_steps=total_steps)
+    opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
 
     writer: SummaryWriter = SummaryWriter()
     global_step = 0
@@ -78,9 +75,6 @@ def main():
             model.train()
             imgs, targets, _ = seq
             batch_loss, _ = model(imgs, targets, optimizer=opt)  # Backward happens inside
-            scheduler.step()
-            current_lr = scheduler.get_last_lr()[0]
-            writer.add_scalar('Learning Rate', current_lr, global_step=global_step)
             total_loss += batch_loss
 
             global_step += 1

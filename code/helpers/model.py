@@ -185,7 +185,7 @@ class SegmentationModel(nn.Module):
         super(SegmentationModel, self).__init__()
         self.device = device
         self.maskrcnn_model = get_model_instance_segmentation(num_classes=2)
-        self.maskrcnn_model.load_state_dict(torch.load('maskrcnn/maskrcnn_model_5.pth'))
+        self.maskrcnn_model.load_state_dict(torch.load('maskrcnn/maskrcnn_model.pth'))
         # When we use gt_masks, we want mask predictions for every box
         self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections, self.maskrcnn_model.roi_heads)
         # Freeze most of the weights

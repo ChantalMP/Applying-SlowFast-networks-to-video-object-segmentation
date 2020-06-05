@@ -15,17 +15,17 @@ from tqdm import tqdm
 # Reference how to compute the bounding boxes: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 
 class DAVISDataset(Dataset):
-    def __init__(self, root, subset='train', resolution='480p', transforms=None):
+    def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017'):
         self.root = root
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
-        self.imagesets_path = os.path.join(self.root, 'ImageSets', '2017')
+        self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root, 'ImageSets', resolution)
         self.transforms = transforms
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
-        sequences_names = [x.strip() for x in tmp]
+        sequences_names = [x.strip() for x in tmp] if year == '2017' else sorted({x.split()[0].split('/')[-2] for x in tmp})
         self.sequences = []
         for seq in sequences_names:
             info = {}

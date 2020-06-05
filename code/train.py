@@ -44,6 +44,7 @@ def main():
     2. With but slow fast same size (as big as it fits)
     3. Smaller slow but bigger fast
     '''
+    # TODO also try to use predicted boxes instead of ground truth boxes
     epochs = 10
     lr = 0.001
     weight_decay = 0.0001

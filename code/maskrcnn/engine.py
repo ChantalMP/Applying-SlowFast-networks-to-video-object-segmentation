@@ -3,14 +3,18 @@ import sys
 import time
 import torch
 
+
 import torchvision.models.detection.mask_rcnn
 
 from coco_utils import get_coco_api_from_dataset
 from coco_eval import CocoEvaluator
 import utils
 from matplotlib import pyplot as plt
+import matplotlib.patches as patches
 import numpy as np
 from PIL import Image
+from collections import defaultdict
+from tqdm import tqdm
 
 
 def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
@@ -26,7 +30,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq):
 
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
-    for images, targets, valids in metric_logger.log_every(data_loader, print_freq, header):
+    for images, targets, valids, _ in metric_logger.log_every(data_loader, print_freq, header):
         if False in valids:
             continue
         images = list(image.to(device) for image in images)
@@ -99,7 +103,7 @@ def evaluate(model, data_loader, device):
     iou_types = _get_iou_types(model)
     coco_evaluator = CocoEvaluator(coco, iou_types)
     count = 0
-    for images, targets, valids in metric_logger.log_every(data_loader, 100, header):
+    for images, targets, valids, _ in metric_logger.log_every(data_loader, 100, header):
         if False in valids:
             continue
         images = list(img.to(device) for img in images)
@@ -107,7 +111,9 @@ def evaluate(model, data_loader, device):
 
         torch.cuda.synchronize()
         model_time = time.time()
+        print("call model")
         outputs = model(images)
+        print("calculated outputs")
 
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
 
@@ -152,3 +158,45 @@ def evaluate(model, data_loader, device):
     coco_evaluator.summarize()
     torch.set_num_threads(n_threads)
     return coco_evaluator
+
+
+@torch.no_grad()
+def predict_boxes(model, data_loader, device):
+    torch.set_num_threads(1)
+    cpu_device = torch.device("cpu")
+    model.eval()
+    all_boxes = defaultdict(list)
+
+    for images, targets, valids, seq_names in tqdm(data_loader, len(data_loader)):
+
+        plotted = False
+        images = list(img.to(device) for img in images)
+
+        torch.cuda.synchronize()
+        outputs = model(images)
+
+        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
+        for i in range(len(seq_names)):
+            all_boxes[seq_names[i]].append(outputs[i]['boxes'].cpu())
+
+        # Plot boxes
+        # for img in images:
+        #     img = img.cpu().numpy().transpose(1, 2, 0)
+        #     ax = plt.subplot(1, 1, 1)
+        #     ax.set_axis_off()
+        #     ax.imshow(img)
+        #     for box, mask_tensor in zip(outputs[0]['boxes'], outputs[0]['masks']):  # Wont work when not using gt_boxes because we can have less boxes than masks
+        #         box = box.int().tolist()
+        #
+        #         x = box[0]
+        #         y = box[1]
+        #         width = box[2] - x
+        #         height = box[3] - y
+        #         rect = patches.Rectangle((x, y), width, height, linewidth=1, edgecolor='r', facecolor='none')
+        #
+        #         # Add the patch to the Axes
+        #         ax.add_patch(rect)
+        #
+        #     if not plotted:
+        #         plt.show()
+    torch.save(all_boxes, "predicted_boxes_train.pt")

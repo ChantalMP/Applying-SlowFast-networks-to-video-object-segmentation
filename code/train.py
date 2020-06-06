@@ -44,9 +44,7 @@ def main():
     2. With but slow fast same size (as big as it fits)
     3. Smaller slow but bigger fast
     '''
-    # TODO use predicted boxes in training
-    # TODO evaluate 1 1 model
-    # TODO evaluate current 8 8 version
+    # TODO use predicted boxes in training TOTEST
     # TODO presentation
     # TODO test gpu usage
     epochs = 10

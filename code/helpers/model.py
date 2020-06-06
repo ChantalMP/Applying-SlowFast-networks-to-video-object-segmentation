@@ -311,8 +311,8 @@ class SegmentationModel(nn.Module):
             batch_original_image_sizes = original_image_sizes[i * self.bs:(i + 1) * self.bs]
             batch_image_sizes = images.image_sizes[0:1] * len(batch_original_image_sizes)  # Because all images in one sequence have the same size
             self._targets_to_device(batch_targets, self.device)
-            # proposals = [elem['boxes'] for elem in batch_targets] # ground truth boxes
-            proposals = [elem['proposals'] for elem in batch_targets]
+            proposals = [elem['boxes'] for elem in batch_targets]  # ground truth boxes
+            # proposals = [elem['proposals'] for elem in batch_targets] # predicted boxes
             detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals,
                                                                         batch_image_sizes, batch_targets)
             detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes, batch_original_image_sizes)

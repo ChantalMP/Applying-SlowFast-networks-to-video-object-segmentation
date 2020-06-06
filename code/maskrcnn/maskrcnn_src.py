@@ -17,20 +17,25 @@ import transforms as T
 
 
 class DavisDataset(object):
-    def __init__(self, root, transforms):
+    def __init__(self, root, transforms, year='2017'):
         self.root = root
         self.transforms = transforms
         # load all image files, sorting them to
         # ensure that they are aligned
         self.imgs = list(sorted(Path(os.path.join(self.root, 'JPEGImages', '480p')).glob('*/*.jpg')))
         self.masks = list(sorted(Path(os.path.join(self.root, 'Annotations', '480p')).glob('*/*.png')))
-        self.imagesets_path = os.path.join(self.root, 'ImageSets', '2017')
+        self.imagesets_path = os.path.join(self.root, 'ImageSets', '2017') if year == '2017' else os.path.join(
+            self.root, 'ImageSets', '480p')
         with open(os.path.join(self.imagesets_path, f'train.txt'), 'r') as f:
-            train_img_names = set(f.read().splitlines())
+            tmp = f.readlines()
+            train_img_names = [x.strip() for x in tmp] if year == '2017' else sorted(
+                {x.split()[0].split('/')[-2] for x in tmp})
+            train_img_names = set(train_img_names)
         with open(os.path.join(self.imagesets_path, f'val.txt'), 'r') as f:
-            val_img_names = set(f.read().splitlines())
-        with open(os.path.join(self.imagesets_path, f'test.txt'), 'r') as f:
-            test_img_names = set(f.read().splitlines())
+            tmp = f.readlines()
+            val_img_names = [x.strip() for x in tmp] if year == '2017' else sorted(
+                {x.split()[0].split('/')[-2] for x in tmp})
+            val_img_names = set(val_img_names)
 
         self.train_indices = []
         self.val_indices = []
@@ -171,22 +176,22 @@ def main(train=True):
     # use our dataset and defined transformations
     if train:
         dataset = DavisDataset('../data/DAVIS', get_transform(train=True))
+        dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
     else:  # box computation
         dataset = DavisDataset('../data/DAVIS', get_transform(train=False))
     dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
 
     # split the dataset in train and test set
-    indices = torch.randperm(len(dataset)).tolist()
     dataset = torch.utils.data.Subset(dataset, dataset.train_indices)
     dataset_val = torch.utils.data.Subset(dataset_val, dataset_val.val_indices)
 
     # define training and validation data loaders
     data_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=2, shuffle=True, num_workers=0,
+        dataset, batch_size=2, shuffle=True, num_workers=4,
         collate_fn=utils.collate_fn)
 
     data_loader_val = torch.utils.data.DataLoader(
-        dataset_val, batch_size=4, shuffle=False, num_workers=0,
+        dataset_val, batch_size=4, shuffle=False, num_workers=4,
         collate_fn=utils.collate_fn)
 
     # get the model using our helper function
@@ -223,7 +228,7 @@ def main(train=True):
         print("That's it!")
 
     else:
-        predict_boxes(model, data_loader, device=device)
+        predict_boxes(model, data_loader_val, device=device)
 
 
 if __name__ == "__main__":

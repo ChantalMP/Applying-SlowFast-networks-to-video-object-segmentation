@@ -52,6 +52,8 @@ class DAVISDataset(Dataset):
                  min(img_height, box[3] + height_change)])
             proposals[i] = bigger_box
 
+        return proposals
+
     # returns a whole sequence
     def __getitem__(self, idx):
         imgs = []

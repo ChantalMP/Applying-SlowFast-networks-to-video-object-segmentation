@@ -12,3 +12,32 @@ One test with and without identity:
 
 One test with slow fast same and maximum
 Then: Reduce slow increase fast gradually in 2 steps
+
+Model_maskrcnn_slowfast_sp_1fp_1:
+--------------------------- Global results for val ---------------------------
+ J&F-Mean    J-Mean  J-Recall  J-Decay    F-Mean  F-Recall   F-Decay
+ 0.710183  0.692615  0.792004  0.02491  0.727751  0.811823  0.021701
+
+---------- Per sequence results for val ----------
+             Sequence    J-Mean    F-Mean
+          blackswan_1  0.721200  0.728435
+          bmx-trees_1  0.453393  0.736273
+         breakdance_1  0.615087  0.647982
+              camel_1  0.879009  0.921727
+     car-roundabout_1  0.953392  0.941187
+         car-shadow_1  0.957747  0.997255
+               cows_1  0.895323  0.932261
+        dance-twirl_1  0.587516  0.660760
+                dog_1  0.893201  0.895929
+      drift-chicane_1  0.898311  0.982110
+     drift-straight_1  0.916239  0.869478
+               goat_1  0.865475  0.882275
+     horsejump-high_1  0.691281  0.787221
+          kite-surf_1  0.037644  0.053766
+              libby_1  0.781097  0.925085
+     motocross-jump_1  0.620415  0.515468
+ paragliding-launch_1  0.132454  0.052744
+            parkour_1  0.899084  0.960793
+      scooter-black_1  0.674916  0.619417
+            soapbox_1  0.379513  0.444851
+

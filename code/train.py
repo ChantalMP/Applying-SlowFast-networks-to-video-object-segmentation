@@ -45,6 +45,10 @@ def main():
     3. Smaller slow but bigger fast
     '''
     # TODO also try to use predicted boxes instead of ground truth boxes
+    # TODO save optimizer
+    # TODO evaluate 1 1 model
+    # TODO evaluate current 8 8 version
+    # TODO presentation
     epochs = 10
     lr = 0.001
     weight_decay = 0.0001

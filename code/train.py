@@ -26,7 +26,7 @@ from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path, slow_pathway_size, fast_pathway_size
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size
 
 '''
 New architecture proposal:
@@ -46,14 +46,14 @@ def main():
     '''
     # TODO predict n boxes (proposals) for all DAVIS images
     # TODO use predicted boxes in training
-    # TODO save optimizer
     # TODO evaluate 1 1 model
     # TODO evaluate current 8 8 version
-    # TODO change current evaluation to join both gt_masks and pred_masks sepertatly to compare just one mask
     # TODO presentation
+    # TODO test gpu usage
     epochs = 10
     lr = 0.001
     weight_decay = 0.0001
+    continue_training = False
 
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
@@ -76,6 +76,12 @@ def main():
     global_step = 0
     best_iou = -1
 
+    if continue_training:
+        checkpoint = torch.load(checkpoint_path)
+        opt.load_state_dict(checkpoint['optimizer_state_dict'])
+        model.load_state_dict(torch.load(model_path))
+        epoch = checkpoint['epoch']
+
     for epoch in tqdm(range(epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
@@ -94,7 +100,11 @@ def main():
             print(f'Saving model with iou: {val_iou}')
             torch.save(model.state_dict(), best_model_path)
 
-    torch.save(model.state_dict(), model_path)
+        torch.save(model.state_dict(), model_path)
+        torch.save({
+            'epoch': epoch,
+            'optimizer_state_dict': opt.state_dict()
+        }, checkpoint_path)
 
 
 if __name__ == '__main__':

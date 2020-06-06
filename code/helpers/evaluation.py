@@ -17,11 +17,7 @@ def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
 
-    with open('data/DAVIS/ImageSets/2017/hard_val.txt', 'r') as f:
-        hard_sequences = set(f.read().splitlines())
-
     intersection_over_unions = []
-    intersection_over_unions_hard = []
     for seq_idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Evaluating with Sequence:"):
         plotted = False
 
@@ -50,8 +46,6 @@ def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
                 mask = (mask >= 0.5).astype(np.float)[0]
                 iou = intersection_over_union(gt_mask.cpu().numpy(), mask)
                 intersection_over_unions.append(iou)
-                if seq_name in hard_sequences:
-                    intersection_over_unions_hard.append(iou)
 
                 if not plotted:
                     full_mask = np.expand_dims(mask, axis=-1).repeat(4, axis=-1)
@@ -76,13 +70,10 @@ def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
                 plt_needed = False
 
     mean_iou = statistics.mean(intersection_over_unions)
-    mean_iou_hard = statistics.mean(intersection_over_unions_hard)
 
-    print(f'\nMean_IoU: {mean_iou:.4f}\n'
-          f'Mean_Hard_IoU: {mean_iou_hard:.4f}\n')
+    print(f'\nMean_IoU: {mean_iou:.4f}\n')
 
     if writer is not None and global_step is not None:
         writer.add_scalar('IoU/Mean', mean_iou, global_step=global_step)
-        writer.add_scalar('IoU/Mean_Hard', mean_iou_hard, global_step=global_step)
 
     return mean_iou

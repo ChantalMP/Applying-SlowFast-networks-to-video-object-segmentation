@@ -1,11 +1,11 @@
 from pathlib import Path
 
 batch_size = 2
-maskrcnn_batch_size = 8  # 4 and 16 for google colab
-slow_pathway_size = 4
-fast_pathway_size = 4
+maskrcnn_batch_size = 8  # 16 for google colab, 8 for local
+slow_pathway_size = 1
+fast_pathway_size = 1
 model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}'
-root_dir_path = Path('')  # For colab '/gdrive/My\ Drive/Python\ Projects/adl4cv_root'
+root_dir_path = Path('')  # For colab '/content/gdrive/My Drive/Python Projects/adl4cv_root'
 root_dir_path.mkdir(parents=True, exist_ok=True)
 models_dir_path = root_dir_path / Path('models')
 models_dir_path.mkdir(parents=True, exist_ok=True)

@@ -6,3 +6,8 @@
 /maskrcnn/maskrcnn_model_5.pth
 /maskrcnn/results/
 /models/
+/runs/
+/davis2017-evaluation/results/
+/maskrcnn/maskrcnn_model_5_old.pth
+/maskrcnn/maskrcnn_model.pth
+/maskrcnn/data/

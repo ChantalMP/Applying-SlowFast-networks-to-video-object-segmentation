@@ -44,10 +44,12 @@ def main():
     2. With but slow fast same size (as big as it fits)
     3. Smaller slow but bigger fast
     '''
-    # TODO also try to use predicted boxes instead of ground truth boxes
+    # TODO predict n boxes (proposals) for all DAVIS images
+    # TODO use predicted boxes in training
     # TODO save optimizer
     # TODO evaluate 1 1 model
     # TODO evaluate current 8 8 version
+    # TODO change current evaluation to join both gt_masks and pred_masks sepertatly to compare just one mask
     # TODO presentation
     epochs = 10
     lr = 0.001

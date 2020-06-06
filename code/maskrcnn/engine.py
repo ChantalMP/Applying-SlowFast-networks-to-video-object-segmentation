@@ -167,7 +167,7 @@ def predict_boxes(model, data_loader, device):
     model.eval()
     all_boxes = defaultdict(list)
 
-    for images, targets, valids, seq_names in tqdm(data_loader, len(data_loader)):
+    for images, targets, valids, seq_names in tqdm(data_loader, total=len(data_loader)):
 
         plotted = False
         images = list(img.to(device) for img in images)

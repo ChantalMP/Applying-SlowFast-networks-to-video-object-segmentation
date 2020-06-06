@@ -82,7 +82,9 @@ class DavisDataset(object):
         num_objs = len(valid_ids)
         masks = masks[valid_ids]
         if len(boxes) == 0:
-            return img, {}, False
+            if self.transforms is not None:
+                img = T.ToTensor()(img, None)[0]
+            return img, {}, False, seq_name
         boxes = torch.as_tensor(boxes, dtype=torch.float32)
         # there is only one class
         labels = torch.ones((num_objs,), dtype=torch.int64)
@@ -167,7 +169,10 @@ def main(train=True):
     # our dataset has two classes only - background and person
     num_classes = 2
     # use our dataset and defined transformations
-    dataset = DavisDataset('../data/DAVIS', get_transform(train=True))
+    if train:
+        dataset = DavisDataset('../data/DAVIS', get_transform(train=True))
+    else:  # box computation
+        dataset = DavisDataset('../data/DAVIS', get_transform(train=False))
     dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
 
     # split the dataset in train and test set

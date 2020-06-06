@@ -5,6 +5,7 @@ import numpy as np
 from PIL import Image
 
 from torch.utils.data import Dataset, DataLoader
+from matplotlib import pyplot as plt
 import matplotlib.patches as patches
 import torch
 from math import ceil
@@ -23,7 +24,7 @@ class DAVISDataset(Dataset):
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
         self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root, 'ImageSets', resolution)
         self.transforms = transforms
-        self.box_proposals = torch.load(f'maskrcnn/predicted_boxes_{subset}.pt')
+        self.box_proposals = torch.load(f'maskrcnn/predicted_boxes_{subset}_{year}.pt')
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
@@ -41,10 +42,9 @@ class DAVISDataset(Dataset):
     def __len__(self):
         return len(self.sequences)
 
-    def expand_proposals(self, proposals, img_width, img_height):
+    def expand_proposals(self, proposals, img_width, img_height, ratio=0.1):
         for i in range(len(proposals)):
             box = proposals[i]
-            ratio = 0.1
             width_change = (box[2] - box[0]) * ratio
             height_change = (box[3] - box[1]) * ratio
             bigger_box = torch.tensor(
@@ -103,7 +103,8 @@ class DAVISDataset(Dataset):
             target["image_id"] = torch.tensor([1000 * idx + i])  # unique if no seq is longer than 1000 frames
             target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
             target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
-            target["proposals"] = self.expand_proposals(proposals[i], imgs[i].shape[1], imgs[i].shape[0])
+            target["proposals"] = self.expand_proposals(proposals[i], img_width=imgs[i].shape[1],
+                                                        img_height=imgs[i].shape[0])
             targets.append(target)
 
         targets = tuple(targets)

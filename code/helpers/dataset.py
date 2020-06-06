@@ -14,6 +14,7 @@ from tqdm import tqdm
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py
 # Reference how to compute the bounding boxes: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 
+
 class DAVISDataset(Dataset):
     def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017'):
         self.root = root
@@ -22,6 +23,7 @@ class DAVISDataset(Dataset):
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
         self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root, 'ImageSets', resolution)
         self.transforms = transforms
+        self.box_proposals = torch.load(f'maskrcnn/predicted_boxes_{subset}.pt')
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
@@ -39,12 +41,25 @@ class DAVISDataset(Dataset):
     def __len__(self):
         return len(self.sequences)
 
+    def expand_proposals(self, proposals, img_width, img_height):
+        for i in range(len(proposals)):
+            box = proposals[i]
+            ratio = 0.1
+            width_change = (box[2] - box[0]) * ratio
+            height_change = (box[3] - box[1]) * ratio
+            bigger_box = torch.tensor(
+                [max(0, box[0] - width_change), max(0, box[1] - height_change), min(img_width, box[2] + width_change),
+                 min(img_height, box[3] + height_change)])
+            proposals[i] = bigger_box
+
     # returns a whole sequence
     def __getitem__(self, idx):
         imgs = []
         masks = []
         boxes = []
         seq_name = self.sequences[idx]['name']
+        proposals = self.box_proposals[seq_name]
+
         for img, msk in zip(self.sequences[idx]['images'], self.sequences[idx]['masks']):
             image = Image.open(img)
             image = np.array(image)
@@ -88,6 +103,7 @@ class DAVISDataset(Dataset):
             target["image_id"] = torch.tensor([1000 * idx + i])  # unique if no seq is longer than 1000 frames
             target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
             target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
+            target["proposals"] = self.expand_proposals(proposals[i], imgs[i].shape[1], imgs[i].shape[0])
             targets.append(target)
 
         targets = tuple(targets)

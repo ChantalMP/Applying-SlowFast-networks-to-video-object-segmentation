@@ -44,7 +44,6 @@ def main():
     2. With but slow fast same size (as big as it fits)
     3. Smaller slow but bigger fast
     '''
-    # TODO predict n boxes (proposals) for all DAVIS images
     # TODO use predicted boxes in training
     # TODO evaluate 1 1 model
     # TODO evaluate current 8 8 version

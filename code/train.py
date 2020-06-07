@@ -26,7 +26,7 @@ from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_pred_boxes
 
 '''
 New architecture proposal:
@@ -57,7 +57,7 @@ def main():
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
-                                                 fast_pathway_size=fast_pathway_size)
+                                                 fast_pathway_size=fast_pathway_size, use_pred_boxes=use_pred_boxes)
     model.to(device)
     model.train()
 

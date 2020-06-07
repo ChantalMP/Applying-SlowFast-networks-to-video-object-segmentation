@@ -181,11 +181,13 @@ class SlowFastLayers(nn.Module):
 
 
 class SegmentationModel(nn.Module):
-    def __init__(self, device, slow_pathway_size, fast_pathway_size):
+    def __init__(self, device, slow_pathway_size, fast_pathway_size, use_pred_boxes):
         super(SegmentationModel, self).__init__()
         self.device = device
         self.maskrcnn_model = get_model_instance_segmentation(num_classes=2)
         self.maskrcnn_model.load_state_dict(torch.load('maskrcnn/maskrcnn_model.pth'))
+        self.use_pred_boxes = use_pred_boxes
+        print(f'Using Predicted Boxes: {self.use_pred_boxes}')
         # When we use gt_masks, we want mask predictions for every box
         self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections, self.maskrcnn_model.roi_heads)
         # Freeze most of the weights
@@ -311,8 +313,10 @@ class SegmentationModel(nn.Module):
             batch_original_image_sizes = original_image_sizes[i * self.bs:(i + 1) * self.bs]
             batch_image_sizes = images.image_sizes[0:1] * len(batch_original_image_sizes)  # Because all images in one sequence have the same size
             self._targets_to_device(batch_targets, self.device)
-            proposals = [elem['boxes'] for elem in batch_targets]  # ground truth boxes
-            # proposals = [elem['proposals'] for elem in batch_targets] # predicted boxes
+            if self.use_pred_boxes:
+                proposals = [elem['proposals'] for elem in batch_targets]  # predicted boxes
+            else:
+                proposals = [elem['boxes'] for elem in batch_targets]  # ground truth boxes
             detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals,
                                                                         batch_image_sizes, batch_targets)
             detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes, batch_original_image_sizes)

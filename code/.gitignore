@@ -11,3 +11,6 @@
 /maskrcnn/maskrcnn_model_5_old.pth
 /maskrcnn/maskrcnn_model.pth
 /maskrcnn/data/
+/maskrcnn/predicted_boxes_train_2017.pt
+/maskrcnn/predicted_boxes_val_2016.pt
+/maskrcnn/predicted_boxes_val_2017.pt

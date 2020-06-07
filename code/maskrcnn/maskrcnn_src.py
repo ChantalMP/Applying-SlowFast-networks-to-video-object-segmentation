@@ -179,7 +179,7 @@ def main(train=True):
         dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
     else:  # box computation
         dataset = DavisDataset('../data/DAVIS', get_transform(train=False))
-    dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
+        dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False), year='2017')
 
     # split the dataset in train and test set
     dataset = torch.utils.data.Subset(dataset, dataset.train_indices)

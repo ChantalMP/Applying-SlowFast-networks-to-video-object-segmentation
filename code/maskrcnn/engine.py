@@ -162,6 +162,8 @@ def evaluate(model, data_loader, device):
 
 @torch.no_grad()
 def predict_boxes(model, data_loader, device):
+    model.roi_heads.score_thresh = 0.0
+    model.roi_heads.detections_per_img = 10
     torch.set_num_threads(1)
     cpu_device = torch.device("cpu")
     model.eval()
@@ -177,7 +179,9 @@ def predict_boxes(model, data_loader, device):
 
         outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         for i in range(len(seq_names)):
-            all_boxes[seq_names[i]].append(outputs[i]['boxes'].cpu())
+            boxes = outputs[i]['boxes'].cpu()
+            assert len(boxes) > 0
+            all_boxes[seq_names[i]].append(boxes)
 
         # Plot boxes
         # for img in images:

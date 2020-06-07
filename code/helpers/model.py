@@ -188,8 +188,11 @@ class SegmentationModel(nn.Module):
         self.maskrcnn_model.load_state_dict(torch.load('maskrcnn/maskrcnn_model.pth'))
         self.use_pred_boxes = use_pred_boxes
         print(f'Using Predicted Boxes: {self.use_pred_boxes}')
-        # When we use gt_masks, we want mask predictions for every box
-        self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections, self.maskrcnn_model.roi_heads)
+
+        if not self.use_pred_boxes:
+            # When we use gt_masks, we want mask predictions for every box
+            self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections, self.maskrcnn_model.roi_heads)
+
         # Freeze most of the weights
         for param in self.maskrcnn_model.backbone.parameters():
             param.requires_grad = False

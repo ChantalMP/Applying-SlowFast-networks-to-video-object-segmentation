@@ -32,6 +32,8 @@ def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
                 ax = plt.subplot(1, 1, 1)
                 ax.set_axis_off()
                 ax.imshow(img)
+                ax.axis('off')
+
                 plt_needed = True
 
             if len(target) == 0:
@@ -64,9 +66,9 @@ def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
                 if save_all_imgs:
                     output_path = pred_output_path / model_name / seq_name
                     output_path.mkdir(parents=True, exist_ok=True)
-                    plt.savefig(output_path / f'{seq_name}_{img_idx}.png')
+                    plt.savefig(output_path / f'{seq_name}_{img_idx}.png', bbox_inches='tight', pad_inches=0)
                 else:
-                    plt.savefig(eval_output_path / f'{seq_name}_{img_idx}.png')
+                    plt.savefig(eval_output_path / f'{seq_name}_{img_idx}.png', bbox_inches='tight', pad_inches=0)
                 plt.clf()
                 plt_needed = False
 

@@ -9,6 +9,7 @@ from collections import OrderedDict
 import torch.nn.functional as F
 from torchvision.ops import boxes as box_ops
 from helpers.constants import batch_size, maskrcnn_batch_size
+from torchvision.models.detection.transform import resize_boxes
 
 
 def postprocess_detections(self, class_logits, box_regression, proposals, image_shapes):
@@ -278,6 +279,10 @@ class SegmentationModel(nn.Module):
                 valid_imgs.append(images[idx])
 
         _, targets = self.maskrcnn_model.transform(valid_imgs, valid_targets)
+        if self.use_pred_boxes:  # also resize proposals
+            for i in range(len(targets)):
+                targets[i]["proposals"] = resize_boxes(targets[i]["proposals"], original_size=(original_image_sizes[0][0], original_image_sizes[0][1]),
+                                                       new_size=transformed_images.image_sizes[0])
         del valid_imgs, valid_targets
 
         image_features = self.apply_padding(image_features)

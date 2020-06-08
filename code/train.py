@@ -47,6 +47,9 @@ def main():
     # TODO use predicted boxes in training TOTEST
     # TODO presentation
     # TODO test gpu usage
+    # TODO train on davis16 dataset and only use box with the highest prob (probably finetune maskrcnn on davis16 as well)
+    # TODO Just reduce score_threshold of current architecture for eval
+    # TODO Only feed most probably boxes and use like ground truth (no sorting out etc)
     epochs = 10
     lr = 0.001
     weight_decay = 0.0001

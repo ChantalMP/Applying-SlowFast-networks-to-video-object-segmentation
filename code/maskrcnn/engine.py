@@ -203,4 +203,4 @@ def predict_boxes(model, data_loader, device):
         #
         #     if not plotted:
         #         plt.show()
-    torch.save(all_boxes, "predicted_boxes_train.pt")
+    torch.save(all_boxes, "predicted_boxes_val_2016.pt")

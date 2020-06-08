@@ -15,3 +15,6 @@
 /maskrcnn/predicted_boxes_val_2016.pt
 /maskrcnn/predicted_boxes_val_2017.pt
 /maskrcnn/orig_boxes/
+/maskrcnn/predicted_proposals_train_2017.pt
+/maskrcnn/predicted_proposals_val_2016.pt
+/maskrcnn/predicted_proposals_val_2017.pt

@@ -17,14 +17,17 @@ from tqdm import tqdm
 
 
 class DAVISDataset(Dataset):
-    def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017'):
+    def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017', use_rpn_proposals=False):
         self.root = root
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
         self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root, 'ImageSets', resolution)
         self.transforms = transforms
-        self.box_proposals = torch.load(f'maskrcnn/predicted_boxes_{subset}_{year}.pt')
+        self.use_rpn_proposals = use_rpn_proposals
+        name = 'proposals' if use_rpn_proposals else 'boxes'
+        loading_str = f'predicted_{name}_{subset}_{year}.pt'
+        self.box_proposals = torch.load(f'maskrcnn/{loading_str}')
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
@@ -105,8 +108,11 @@ class DAVISDataset(Dataset):
             target["image_id"] = torch.tensor([1000 * idx + i])  # unique if no seq is longer than 1000 frames
             target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
             target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
-            target["proposals"] = self.expand_proposals(proposals[i], img_width=imgs[i].shape[1],
-                                                        img_height=imgs[i].shape[0])
+            if self.use_rpn_proposals:
+                target["proposals"] = proposals[i]
+            else:
+                target["proposals"] = self.expand_proposals(proposals[i], img_width=imgs[i].shape[1],
+                                                            img_height=imgs[i].shape[0])
             targets.append(target)
 
         targets = tuple(targets)

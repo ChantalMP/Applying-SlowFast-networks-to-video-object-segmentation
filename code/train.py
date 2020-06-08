@@ -26,7 +26,7 @@ from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.evaluation import evaluate
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_pred_boxes
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals
 
 '''
 New architecture proposal:
@@ -57,11 +57,11 @@ def main():
     continue_training = False
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, use_rpn_proposals=use_rpn_proposals)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
-                                                 fast_pathway_size=fast_pathway_size, use_pred_boxes=use_pred_boxes)
+                                                 fast_pathway_size=fast_pathway_size, use_pred_boxes=use_proposals)
     model.to(device)
     model.train()
 
@@ -81,9 +81,11 @@ def main():
         checkpoint = torch.load(checkpoint_path)
         opt.load_state_dict(checkpoint['optimizer_state_dict'])
         model.load_state_dict(torch.load(model_path))
-        epoch = checkpoint['epoch']
+        epoch = checkpoint['epoch'] + 1
+    else:
+        epoch = 0
 
-    for epoch in tqdm(range(epochs), total=epochs, desc="Epochs"):
+    for epoch in tqdm(range(epoch, epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
             model.train()

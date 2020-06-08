@@ -4,8 +4,9 @@ batch_size = 2
 maskrcnn_batch_size = 8  # 16 for google colab, 8 for local
 slow_pathway_size = 1
 fast_pathway_size = 1
-use_pred_boxes = True
-model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}_pred_boxes_{use_pred_boxes}'
+use_proposals = True
+use_rpn_proposals = False
+model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}_pred_boxes_{use_proposals}_rpn_{use_rpn_proposals}'
 root_dir_path = Path('')  # For colab '/content/gdrive/My Drive/Python Projects/adl4cv_root'
 root_dir_path.mkdir(parents=True, exist_ok=True)
 models_dir_path = root_dir_path / Path('models')

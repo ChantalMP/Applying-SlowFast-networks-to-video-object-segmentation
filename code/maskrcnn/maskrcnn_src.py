@@ -167,7 +167,7 @@ def get_transform(train):
     return T.Compose(transforms)
 
 
-def main(train=True):
+def main(train=True, year=None, split=None, use_rpn_proposals=None):
     # train on the GPU or on the CPU, if a GPU is not available
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -179,7 +179,10 @@ def main(train=True):
         dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
     else:  # box computation
         dataset = DavisDataset('../data/DAVIS', get_transform(train=False))
-        dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False), year='2017')
+        if year is None or year == '2017':
+            dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False), year='2017')
+        else:
+            dataset_val = DavisDataset('../data/DAVIS_2016', get_transform(train=False), year='2016')
 
     # split the dataset in train and test set
     dataset = torch.utils.data.Subset(dataset, dataset.train_indices)
@@ -228,8 +231,11 @@ def main(train=True):
         print("That's it!")
 
     else:
-        predict_boxes(model, data_loader_val, device=device)
+        if split is None or split == 'train':
+            predict_boxes(model, data_loader, device=device, year=year, split=split, use_rpn_proposals=use_rpn_proposals)
+        else:
+            predict_boxes(model, data_loader_val, device=device, year=year, split=split, use_rpn_proposals=use_rpn_proposals)
 
 
 if __name__ == "__main__":
-    main(train=False)
+    main(train=False, year='2017', split='val', use_rpn_proposals=True)

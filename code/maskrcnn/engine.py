@@ -160,26 +160,61 @@ def evaluate(model, data_loader, device):
     return coco_evaluator
 
 
+from typing import List, Tuple
+from collections import OrderedDict
+import types
+
+
+def rpn_forward(self, images, targets=None):
+    """
+    Arguments:
+        images (list[Tensor]): images to be processed
+        targets (list[Dict[Tensor]]): ground-truth boxes present in the image (optional)
+
+    Returns:
+        result (list[BoxList] or dict[Tensor]): the output from the model.
+            During training, it returns a dict[Tensor] which contains the losses.
+            During testing, it returns list[BoxList] contains additional fields
+            like `scores`, `labels` and `mask` (for Mask R-CNN models).
+
+    """
+    if self.training and targets is None:
+        raise ValueError("In training mode, targets should be passed")
+    original_image_sizes = torch.jit.annotate(List[Tuple[int, int]], [])
+    for img in images:
+        val = img.shape[-2:]
+        assert len(val) == 2
+        original_image_sizes.append((val[0], val[1]))
+
+    images, targets = self.transform(images, targets)
+    features = self.backbone(images.tensors)
+    if isinstance(features, torch.Tensor):
+        features = OrderedDict([('0', features)])
+    proposals, proposal_losses = self.rpn(images, features, targets)
+    return proposals
+
+
 @torch.no_grad()
-def predict_boxes(model, data_loader, device):
+def predict_boxes(model, data_loader, device, split, year, use_rpn_proposals=False):
     model.roi_heads.score_thresh = 0.0
     model.roi_heads.detections_per_img = 10
     torch.set_num_threads(1)
-    cpu_device = torch.device("cpu")
     model.eval()
     all_boxes = defaultdict(list)
+    if use_rpn_proposals:
+        model.forward = types.MethodType(rpn_forward, model)
 
     for images, targets, valids, seq_names in tqdm(data_loader, total=len(data_loader)):
 
         plotted = False
         images = list(img.to(device) for img in images)
-
-        torch.cuda.synchronize()
         outputs = model(images)
 
-        outputs = [{k: v.to(cpu_device) for k, v in t.items()} for t in outputs]
         for i in range(len(seq_names)):
-            boxes = outputs[i]['boxes'].cpu()
+            if use_rpn_proposals:
+                boxes = outputs[i]
+            else:
+                boxes = outputs[i]['boxes'].cpu()
             assert len(boxes) > 0
             all_boxes[seq_names[i]].append(boxes)
 
@@ -203,4 +238,6 @@ def predict_boxes(model, data_loader, device):
         #
         #     if not plotted:
         #         plt.show()
-    torch.save(all_boxes, "predicted_boxes_val_2016.pt")
+    name = 'proposals' if use_rpn_proposals else 'boxes'
+    saving_str = f'predicted_{name}_{split}_{year}.pt'
+    torch.save(all_boxes, saving_str)

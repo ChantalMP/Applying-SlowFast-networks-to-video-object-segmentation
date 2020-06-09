@@ -208,6 +208,7 @@ class SegmentationModel(nn.Module):
 
         self.bs = batch_size
         self.maskrcnn_bs = maskrcnn_batch_size
+        self.maskrcnn_model.roi_heads.detections_per_img = 10
 
     @torch.no_grad()
     def compute_maskrcnn_features(self, images_tensors):
@@ -329,7 +330,7 @@ class SegmentationModel(nn.Module):
             detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals,
                                                                         batch_image_sizes, batch_targets)
             detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes, batch_original_image_sizes)
-
+            self._targets_to_device(detections, device=torch.device('cpu'))
             all_detections.extend(detections)
 
             del feature_idxs, slow_valid_features, fast_valid_features, batch_targets, slow_fast_features, proposals

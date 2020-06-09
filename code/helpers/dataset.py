@@ -109,7 +109,7 @@ class DAVISDataset(Dataset):
             target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
             target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
             if self.use_rpn_proposals:
-                target["proposals"] = proposals[i]
+                target["proposals"] = proposals[i].cpu()
             else:
                 target["proposals"] = self.expand_proposals(proposals[i], img_width=imgs[i].shape[1],
                                                             img_height=imgs[i].shape[0])

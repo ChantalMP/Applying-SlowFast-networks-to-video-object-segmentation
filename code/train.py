@@ -51,6 +51,11 @@ def main():
     # TODO Just reduce score_threshold of current architecture for eval
     # TODO Only feed most probably boxes and use like ground truth (no sorting out etc)
     # TODO directly RPN outpus can be used?
+    # TODO excel sheet for google colab (add 1-1 to the list)
+    # TODO if osvos with first picture no context is learned on the left -> overfit on middle frame
+    # TODO start with our trained network and finetune it for osvos
+    # TODO stride
+    # TODO play with threshold for model for evaluation
     epochs = 10
     lr = 0.001
     weight_decay = 0.0001
@@ -61,7 +66,7 @@ def main():
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
-                                                 fast_pathway_size=fast_pathway_size, use_pred_boxes=use_proposals)
+                                                 fast_pathway_size=fast_pathway_size, use_proposals=use_proposals, use_rpn_proposals=use_rpn_proposals)
     model.to(device)
     model.train()
 
@@ -78,6 +83,7 @@ def main():
     best_iou = -1
 
     if continue_training:
+        print('Continuing training')
         checkpoint = torch.load(checkpoint_path)
         opt.load_state_dict(checkpoint['optimizer_state_dict'])
         model.load_state_dict(torch.load(model_path))

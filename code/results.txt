@@ -96,3 +96,60 @@ model_maskrcnn_slowfast_sp_8fp_8:
             parkour_1  0.891372  0.956082
       scooter-black_1  0.629338  0.589285
             soapbox_1  0.386508  0.489265
+
+Pred boxes
+model_maskrcnn_slowfast_sp_1fp_1_pred_boxes_True_rpn_False
+--------------------------- Global results for val ---------------------------
+ J&F-Mean    J-Mean  J-Recall   J-Decay    F-Mean  F-Recall   F-Decay
+ 0.671425  0.662589  0.764922  0.000926  0.680261  0.760918 -0.015733
+
+---------- Per sequence results for val ----------
+             Sequence    J-Mean    F-Mean
+          blackswan_1  0.723679  0.793801
+          bmx-trees_1  0.324889  0.652049
+         breakdance_1  0.180314  0.251658
+              camel_1  0.761640  0.804304
+     car-roundabout_1  0.704375  0.674834
+         car-shadow_1  0.860323  0.817677
+               cows_1  0.853072  0.882622
+        dance-twirl_1  0.487795  0.510688
+                dog_1  0.865469  0.850488
+      drift-chicane_1  0.781765  0.804945
+     drift-straight_1  0.840356  0.768650
+               goat_1  0.863771  0.872654
+     horsejump-high_1  0.761218  0.862903
+          kite-surf_1  0.602833  0.489451
+              libby_1  0.602351  0.789548
+     motocross-jump_1  0.601850  0.574497
+ paragliding-launch_1  0.586478  0.220148
+            parkour_1  0.874458  0.934099
+      scooter-black_1  0.561547  0.560924
+            soapbox_1  0.413596  0.489286
+
+model_maskrcnn_slowfast_sp_4fp_4_pred_boxes_True_rpn_False
+--------------------------- Global results for val ---------------------------
+ J&F-Mean    J-Mean  J-Recall   J-Decay   F-Mean  F-Recall   F-Decay
+ 0.662408  0.652925  0.735429 -0.015876  0.67189  0.730846 -0.018263
+
+---------- Per sequence results for val ----------
+             Sequence    J-Mean    F-Mean
+          blackswan_1  0.803514  0.850371
+          bmx-trees_1  0.348282  0.646618
+         breakdance_1  0.179558  0.237038
+              camel_1  0.768602  0.816661
+     car-roundabout_1  0.699998  0.674626
+         car-shadow_1  0.862066  0.811721
+               cows_1  0.867118  0.890755
+        dance-twirl_1  0.444433  0.468366
+                dog_1  0.841299  0.814003
+      drift-chicane_1  0.786212  0.866465
+     drift-straight_1  0.778965  0.710166
+               goat_1  0.860018  0.869097
+     horsejump-high_1  0.773210  0.861295
+          kite-surf_1  0.564838  0.445808
+              libby_1  0.684048  0.855644
+     motocross-jump_1  0.412114  0.458254
+ paragliding-launch_1  0.583135  0.200297
+            parkour_1  0.865171  0.925992
+      scooter-black_1  0.497374  0.524510
+            soapbox_1  0.438544  0.510119

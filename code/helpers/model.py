@@ -182,15 +182,16 @@ class SlowFastLayers(nn.Module):
 
 
 class SegmentationModel(nn.Module):
-    def __init__(self, device, slow_pathway_size, fast_pathway_size, use_pred_boxes):
+    def __init__(self, device, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals):
         super(SegmentationModel, self).__init__()
         self.device = device
         self.maskrcnn_model = get_model_instance_segmentation(num_classes=2)
         self.maskrcnn_model.load_state_dict(torch.load('maskrcnn/maskrcnn_model.pth'))
-        self.use_pred_boxes = use_pred_boxes
-        print(f'Using Predicted Boxes: {self.use_pred_boxes}')
+        self.use_proposals = use_proposals
+        self.use_rpn_proposals = use_rpn_proposals
+        print(f'Using Predicted Boxes: {self.use_proposals}')
 
-        if not self.use_pred_boxes:
+        if not self.use_proposals:
             # When we use gt_masks, we want mask predictions for every box
             self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections, self.maskrcnn_model.roi_heads)
 
@@ -279,7 +280,7 @@ class SegmentationModel(nn.Module):
                 valid_imgs.append(images[idx])
 
         _, targets = self.maskrcnn_model.transform(valid_imgs, valid_targets)
-        if self.use_pred_boxes:  # also resize proposals
+        if self.use_proposals and not self.use_rpn_proposals:  # also resize proposals if they are final boxes
             for i in range(len(targets)):
                 targets[i]["proposals"] = resize_boxes(targets[i]["proposals"], original_size=(original_image_sizes[0][0], original_image_sizes[0][1]),
                                                        new_size=transformed_images.image_sizes[0])
@@ -321,7 +322,7 @@ class SegmentationModel(nn.Module):
             batch_original_image_sizes = original_image_sizes[i * self.bs:(i + 1) * self.bs]
             batch_image_sizes = images.image_sizes[0:1] * len(batch_original_image_sizes)  # Because all images in one sequence have the same size
             self._targets_to_device(batch_targets, self.device)
-            if self.use_pred_boxes:
+            if self.use_proposals:
                 proposals = [elem['proposals'] for elem in batch_targets]  # predicted boxes
             else:
                 proposals = [elem['boxes'] for elem in batch_targets]  # ground truth boxes

@@ -86,7 +86,7 @@ class SlowFastLayers(nn.Module):
         kernel_size_slow1 = ceil(self.slow_pathway_size / 2)
         kernel_size_fast1 = ceil(self.fast_pathway_size / 2)
         kernel_size_slow2 = kernel_size_slow1 + 1 if self.slow_pathway_size % 2 == 0 else kernel_size_slow1
-        kernel_size_fast2 = kernel_size_fast1 + 1 if self.slow_pathway_size % 2 == 0 else kernel_size_fast1
+        kernel_size_fast2 = kernel_size_fast1 + 1 if self.fast_pathway_size % 2 == 0 else kernel_size_fast1
         kernel_size_f2s = kernel_size_fast2 - kernel_size_slow2 + 1
 
         self.fast_conv1 = nn.Conv3d(

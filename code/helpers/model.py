@@ -208,7 +208,7 @@ class SegmentationModel(nn.Module):
 
         self.bs = batch_size
         self.maskrcnn_bs = maskrcnn_batch_size
-        self.maskrcnn_model.roi_heads.detections_per_img = 5
+        self.maskrcnn_model.roi_heads.detections_per_img = 10
 
     @torch.no_grad()
     def compute_maskrcnn_features(self, images_tensors):

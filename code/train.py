@@ -45,18 +45,18 @@ def main():
     3. Smaller slow but bigger fast
     '''
     # TODO use predicted boxes in training TOTEST
-    # TODO presentation
     # TODO test gpu usage
     # TODO train on davis16 dataset and only use box with the highest prob (probably finetune maskrcnn on davis16 as well)
     # TODO Just reduce score_threshold of current architecture for eval
     # TODO Only feed most probably boxes and use like ground truth (no sorting out etc)
-    # TODO directly RPN outpus can be used?
-    # TODO excel sheet for google colab (add 1-1 to the list)
     # TODO if osvos with first picture no context is learned on the left -> overfit on middle frame
     # TODO start with our trained network and finetune it for osvos
     # TODO stride
     # TODO play with threshold for model for evaluation
-    epochs = 10
+    # TODO retest identity?
+    # TODO also test last model even though not best
+
+    epochs = 15
     lr = 0.001
     weight_decay = 0.0001
     continue_training = False

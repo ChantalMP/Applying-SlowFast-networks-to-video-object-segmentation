@@ -13,7 +13,7 @@
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
     <option name="SCRIPT_NAME" value="$PROJECT_DIR$/davis2017-evaluation/evaluation_method.py" />
-    <option name="PARAMETERS" value="--task unsupervised --results_path results/unsupervised/model_maskrcnn_slowfast_sp_4fp_4_pred_boxes_True_rpn_False --year=2016 --set=val" />
+    <option name="PARAMETERS" value="--task unsupervised --results_path results/unsupervised/model_maskrcnn_slowfast_sp_1fp_1_pred_boxes_True_rpn_True --year=2016 --set=val" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="false" />
     <option name="MODULE_MODE" value="false" />

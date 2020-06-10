@@ -153,3 +153,32 @@ model_maskrcnn_slowfast_sp_4fp_4_pred_boxes_True_rpn_False
             parkour_1  0.865171  0.925992
       scooter-black_1  0.497374  0.524510
             soapbox_1  0.438544  0.510119
+
+
+model_maskrcnn_slowfast_sp_1fp_1_pred_boxes_True_rpn_True (max detections 5)
+--------------------------- Global results for val ---------------------------
+ J&F-Mean    J-Mean  J-Recall   J-Decay    F-Mean  F-Recall   F-Decay
+ 0.666515  0.654307  0.739227 -0.011797  0.678723  0.767364 -0.003554
+
+---------- Per sequence results for val ----------
+             Sequence    J-Mean    F-Mean
+          blackswan_1  0.402515  0.607713
+          bmx-trees_1  0.295883  0.599843
+         breakdance_1  0.216546  0.261322
+              camel_1  0.762786  0.797850
+     car-roundabout_1  0.710538  0.676699
+         car-shadow_1  0.878297  0.862170
+               cows_1  0.896740  0.929012
+        dance-twirl_1  0.547135  0.583087
+                dog_1  0.856872  0.850297
+      drift-chicane_1  0.827124  0.915085
+     drift-straight_1  0.830537  0.760978
+               goat_1  0.861496  0.868336
+     horsejump-high_1  0.751596  0.843918
+          kite-surf_1  0.615340  0.454893
+              libby_1  0.648801  0.832497
+     motocross-jump_1  0.555822  0.548505
+ paragliding-launch_1  0.599108  0.207450
+            parkour_1  0.875741  0.920765
+      scooter-black_1  0.522963  0.542137
+            soapbox_1  0.430293  0.511893

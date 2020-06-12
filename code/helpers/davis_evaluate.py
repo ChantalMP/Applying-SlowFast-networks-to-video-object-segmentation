@@ -60,11 +60,11 @@ def davis_evaluation(model):
     table_seq = pd.DataFrame(data=list(zip(seq_names, J_per_object, F_per_object)), columns=seq_measures)
 
     # Print the results
-    sys.stdout.write(f"--------------------------- Global results for val ---------------------------\n")
+    print(f"--------------------------- Global results for val ---------------------------\n")
     print(table_g.to_string(index=False))
-    sys.stdout.write(f"\n---------- Per sequence results for val ----------\n")
+    print(f"\n---------- Per sequence results for val ----------\n")
     print(table_seq.to_string(index=False))
     total_time = time() - time_start
-    sys.stdout.write('\nTotal time:' + str(total_time))
+    print('\nTotal time:' + str(total_time))
 
     return table_g['J&F-Mean'][0]

@@ -24,7 +24,7 @@ from helpers.model import SegmentationModel
 import torch
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
-from helpers.evaluation import evaluate
+from helpers.davis_evaluate import davis_evaluation
 from torch.utils.tensorboard import SummaryWriter
 from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals
 
@@ -91,6 +91,7 @@ def main():
     else:
         epoch = 0
 
+    davis_evaluation(model)
     for epoch in tqdm(range(epoch, epochs), total=epochs - epoch, desc="Epochs"):
         total_loss = 0.
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
@@ -103,7 +104,7 @@ def main():
 
         print(f'\nLoss: {total_loss:.4f}\n')
         writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
-        val_iou = evaluate(model, writer=writer, global_step=global_step)
+        val_iou = davis_evaluation(model)
         if val_iou > best_iou:
             best_iou = val_iou
             print(f'Saving model with iou: {val_iou}')

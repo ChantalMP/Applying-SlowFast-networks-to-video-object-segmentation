@@ -209,3 +209,65 @@ model_maskrcnn_slowfast_sp_4fp_4_pred_boxes_True_rpn_True
             parkour_1  0.877574  0.923417
       scooter-black_1  0.514025  0.541705
             soapbox_1  0.509551  0.558736
+
+model_maskrcnn_slowfast_sp_7fp_7_pred_boxes_True_rpn_True (not fully trained)
+--------------------------- Global results for val ---------------------------
+ J&F-Mean    J-Mean  J-Recall   J-Decay    F-Mean  F-Recall   F-Decay
+ 0.671373  0.662981  0.747238  0.002887  0.679766  0.770731  0.003823
+
+---------- Per sequence results for val ----------
+             Sequence    J-Mean    F-Mean
+          blackswan_1  0.688360  0.765629
+          bmx-trees_1  0.344016  0.650791
+         breakdance_1  0.192008  0.239568
+              camel_1  0.776558  0.824227
+     car-roundabout_1  0.715579  0.704313
+         car-shadow_1  0.886458  0.881542
+               cows_1  0.893597  0.926892
+        dance-twirl_1  0.510385  0.554554
+                dog_1  0.836673  0.807155
+      drift-chicane_1  0.668178  0.693523
+     drift-straight_1  0.871651  0.806949
+               goat_1  0.862880  0.870169
+     horsejump-high_1  0.763325  0.842722
+          kite-surf_1  0.567897  0.433027
+              libby_1  0.642256  0.826653
+     motocross-jump_1  0.528300  0.535033
+ paragliding-launch_1  0.602508  0.205457
+            parkour_1  0.881510  0.930376
+      scooter-black_1  0.513003  0.535747
+            soapbox_1  0.514474  0.560983
+
+Updated model:
+Global results saved in results/unsupervised/model_maskrcnn_slowfast_sp_7fp_7_pred_boxes_True_rpn_True/global_results-val.csv
+Per-sequence results saved in results/unsupervised/model_maskrcnn_slowfast_sp_7fp_7_pred_boxes_True_rpn_True/per-sequence_results-val.csv
+--------------------------- Global results for val ---------------------------
+ J&F-Mean    J-Mean  J-Recall   J-Decay    F-Mean  F-Recall   F-Decay
+ 0.672736  0.662684  0.745486  0.002516  0.682788  0.773839  0.000534
+
+---------- Per sequence results for val ----------
+             Sequence    J-Mean    F-Mean
+          blackswan_1  0.613039  0.724985
+          bmx-trees_1  0.339710  0.622408
+         breakdance_1  0.172252  0.219952
+              camel_1  0.776078  0.821130
+     car-roundabout_1  0.715845  0.709647
+         car-shadow_1  0.887874  0.889323
+               cows_1  0.897240  0.931918
+        dance-twirl_1  0.531956  0.573839
+                dog_1  0.817488  0.802906
+      drift-chicane_1  0.718421  0.759922
+     drift-straight_1  0.856819  0.802149
+               goat_1  0.863344  0.872253
+     horsejump-high_1  0.796803  0.870827
+          kite-surf_1  0.568918  0.438494
+              libby_1  0.639242  0.822553
+     motocross-jump_1  0.534698  0.541798
+ paragliding-launch_1  0.604092  0.207655
+            parkour_1  0.888168  0.940146
+      scooter-black_1  0.512573  0.537823
+            soapbox_1  0.519111  0.566032
+
+
+# TODO run evaluate method again for the above example
+# TODO evaluation should be the same during training

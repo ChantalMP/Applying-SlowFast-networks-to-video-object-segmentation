@@ -5,10 +5,10 @@ import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 import numpy as np
-from davis2017.davis import DAVIS
-from davis2017.metrics import db_eval_boundary, db_eval_iou
-from davis2017 import utils
-from davis2017.results import Results
+from davis2017_evaluation.davis2017.davis import DAVIS
+from davis2017_evaluation.davis2017.metrics import db_eval_boundary, db_eval_iou
+from davis2017_evaluation.davis2017 import utils
+from davis2017_evaluation.davis2017.results import Results
 from scipy.optimize import linear_sum_assignment
 
 

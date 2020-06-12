@@ -20,7 +20,7 @@ def extract_for_davis_evaluation(model):
     for seq_idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Calculating Segmentations"):
 
         imgs, targets, seq_name = seq
-        seq_output_path = Path(f'davis2017-evaluation/results/unsupervised/{model_name}/{seq_name}')
+        seq_output_path = Path(f'davis2017_evaluation/results/unsupervised/{model_name}/{seq_name}')
         seq_output_path.mkdir(parents=True, exist_ok=True)
         with torch.no_grad():
             _, detections = model(imgs, deepcopy(targets))

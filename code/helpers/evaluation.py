@@ -8,12 +8,12 @@ from matplotlib import pyplot as plt
 import numpy as np
 from helpers.utils import intersection_over_union
 from copy import deepcopy
-from helpers.constants import eval_output_path, model_name, pred_output_path
+from helpers.constants import eval_output_path, model_name, pred_output_path, use_rpn_proposals
 
 
 def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms)
+    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, use_rpn_proposals=use_rpn_proposals)
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
 
@@ -32,6 +32,8 @@ def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
                 ax = plt.subplot(1, 1, 1)
                 ax.set_axis_off()
                 ax.imshow(img)
+                ax.axis('off')
+
                 plt_needed = True
 
             if len(target) == 0:
@@ -64,9 +66,9 @@ def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
                 if save_all_imgs:
                     output_path = pred_output_path / model_name / seq_name
                     output_path.mkdir(parents=True, exist_ok=True)
-                    plt.savefig(output_path / f'{seq_name}_{img_idx}.png')
+                    plt.savefig(output_path / f'{seq_name}_{img_idx}.png', bbox_inches='tight', pad_inches=0)
                 else:
-                    plt.savefig(eval_output_path / f'{seq_name}_{img_idx}.png')
+                    plt.savefig(eval_output_path / f'{seq_name}_{img_idx}.png', bbox_inches='tight', pad_inches=0)
                 plt.clf()
                 plt_needed = False
 

@@ -3,7 +3,7 @@ import errno
 import numpy as np
 from PIL import Image
 import warnings
-from davis2017.davis import DAVIS
+from davis2017_evaluation.davis2017.davis import DAVIS
 
 
 def _pascal_color_map(N=256, normalized=False):

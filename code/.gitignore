@@ -7,7 +7,15 @@
 /maskrcnn/results/
 /models/
 /runs/
-/davis2017-evaluation/results/
+/davis2017_evaluation/results/
 /maskrcnn/maskrcnn_model_5_old.pth
 /maskrcnn/maskrcnn_model.pth
 /maskrcnn/data/
+/maskrcnn/predicted_boxes_train_2017.pt
+/maskrcnn/predicted_boxes_val_2016.pt
+/maskrcnn/predicted_boxes_val_2017.pt
+/maskrcnn/orig_boxes/
+/maskrcnn/predicted_proposals_train_2017.pt
+/maskrcnn/predicted_proposals_val_2016.pt
+/maskrcnn/predicted_proposals_val_2017.pt
+/models_old/

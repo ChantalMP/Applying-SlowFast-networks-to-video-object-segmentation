@@ -24,9 +24,9 @@ from helpers.model import SegmentationModel
 import torch
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
-from helpers.evaluation import evaluate
+from helpers.davis_evaluate import davis_evaluation
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals
 
 '''
 New architecture proposal:
@@ -45,19 +45,28 @@ def main():
     3. Smaller slow but bigger fast
     '''
     # TODO use predicted boxes in training TOTEST
-    # TODO presentation
     # TODO test gpu usage
-    epochs = 10
+    # TODO train on davis16 dataset and only use box with the highest prob (probably finetune maskrcnn on davis16 as well)
+    # TODO Just reduce score_threshold of current architecture for eval
+    # TODO Only feed most probably boxes and use like ground truth (no sorting out etc)
+    # TODO if osvos with first picture no context is learned on the left -> overfit on middle frame
+    # TODO start with our trained network and finetune it for osvos
+    # TODO stride
+    # TODO play with threshold for model for evaluation
+    # TODO test bigger slowfast
+    # TODO avg of N runs
+
+    epochs = 15
     lr = 0.001
     weight_decay = 0.0001
     continue_training = False
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, use_rpn_proposals=use_rpn_proposals)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
-                                                 fast_pathway_size=fast_pathway_size)
+                                                 fast_pathway_size=fast_pathway_size, use_proposals=use_proposals, use_rpn_proposals=use_rpn_proposals)
     model.to(device)
     model.train()
 
@@ -74,12 +83,17 @@ def main():
     best_iou = -1
 
     if continue_training:
+        print('Continuing training')
         checkpoint = torch.load(checkpoint_path)
         opt.load_state_dict(checkpoint['optimizer_state_dict'])
         model.load_state_dict(torch.load(model_path))
-        epoch = checkpoint['epoch']
+        epoch = checkpoint['epoch'] + 1
+    else:
+        epoch = 0
 
-    for epoch in tqdm(range(epochs), total=epochs, desc="Epochs"):
+    # First do an evaluation to check everything works
+    davis_evaluation(model)
+    for epoch in tqdm(range(epoch, epochs), total=epochs - epoch, desc="Epochs"):
         total_loss = 0.
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
             model.train()
@@ -91,7 +105,7 @@ def main():
 
         print(f'\nLoss: {total_loss:.4f}\n')
         writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
-        val_iou = evaluate(model, writer=writer, global_step=global_step)
+        val_iou = davis_evaluation(model)
         if val_iou > best_iou:
             best_iou = val_iou
             print(f'Saving model with iou: {val_iou}')

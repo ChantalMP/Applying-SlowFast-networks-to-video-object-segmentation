@@ -210,8 +210,6 @@ class SlowFastLayers(nn.Module):
 
             merged_features[key] = torch.cat([key_scale_slow_features, key_scale_fast_features], dim=1).squeeze(dim=2)
             del key_scale_slow_features, key_scale_fast_features
-            # For residual learning add original image features to merged features
-            # merged_features[key] += torch.stack(slow_features[key]).transpose(1, 2)[:, :, self.slow_pathway_size // 2].to(self.device)
 
         return merged_features
 

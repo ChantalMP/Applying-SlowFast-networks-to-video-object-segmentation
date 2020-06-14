@@ -150,7 +150,10 @@ class SlowFastLayers(nn.Module):
             return (div + 1, div + 1, div + 2)
 
     def _calc_fuse_kernel_size(self, slow_in, slow_kernel, fast_in, fast_kernel):
-        pass
+        out_slow = (slow_in - slow_kernel) + 1
+        out_fast = (fast_in - fast_kernel) + 1
+        fuse_kernel_size = out_fast - out_slow + 1
+        return fuse_kernel_size
 
     def fuse(self, slow, fast):
         fuse = self.conv_f2s(fast)

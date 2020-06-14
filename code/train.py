@@ -53,8 +53,8 @@ def main():
     # TODO start with our trained network and finetune it for osvos
     # TODO stride
     # TODO play with threshold for model for evaluation
-    # TODO retest identity?
-    # TODO also test last model even though not best
+    # TODO test bigger slowfast
+    # TODO avg of N runs
 
     epochs = 15
     lr = 0.001
@@ -91,6 +91,7 @@ def main():
     else:
         epoch = 0
 
+    # First do an evaluation to check everything works
     davis_evaluation(model)
     for epoch in tqdm(range(epoch, epochs), total=epochs - epoch, desc="Epochs"):
         total_loss = 0.

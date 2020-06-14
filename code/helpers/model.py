@@ -86,12 +86,12 @@ class SlowFastLayers(nn.Module):
         kernel_size_slow1, kernel_size_slow2, kernel_size_slow3 = self._calc_kernel_sizes(self.slow_pathway_size)
         kernel_size_fast1, kernel_size_fast2, kernel_size_fast3 = self._calc_kernel_sizes(self.fast_pathway_size)
 
-        kernel_size_f2s1, slow_out1, slow_out1 = self._calc_fuse_kernel_size(slow_in=self.slow_pathway_size,
+        kernel_size_f2s1, slow_out1, fast_out1 = self._calc_fuse_kernel_size(slow_in=self.slow_pathway_size,
                                                                              slow_kernel=kernel_size_slow1,
                                                                              fast_in=self.fast_pathway_size,
                                                                              fast_kernel=kernel_size_fast1)
         kernel_size_f2s2, _, _ = self._calc_fuse_kernel_size(slow_in=slow_out1, slow_kernel=kernel_size_slow2,
-                                                             fast_in=slow_out1, fast_kernel=kernel_size_fast2)
+                                                             fast_in=fast_out1, fast_kernel=kernel_size_fast2)
 
         self.fast_conv1, self.bn_f1 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_fast1,
                                                              in_channels=input_size, out_channels=32)
@@ -103,7 +103,7 @@ class SlowFastLayers(nn.Module):
                                                              in_channels=32, out_channels=32)
 
         self.slow_conv2, self.bn_s2 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_slow2,
-                                                             in_channels=256, out_channels=224)
+                                                             in_channels=256, out_channels=192)
 
         self.fast_conv3, self.bn_f3 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_fast3,
                                                              in_channels=32, out_channels=32)

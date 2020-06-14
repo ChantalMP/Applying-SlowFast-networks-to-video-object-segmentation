@@ -83,57 +83,74 @@ class SlowFastLayers(nn.Module):
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
 
-        kernel_size_slow1 = ceil(self.slow_pathway_size / 2)
-        kernel_size_fast1 = ceil(self.fast_pathway_size / 2)
-        kernel_size_slow2 = kernel_size_slow1 + 1 if self.slow_pathway_size % 2 == 0 else kernel_size_slow1
-        kernel_size_fast2 = kernel_size_fast1 + 1 if self.fast_pathway_size % 2 == 0 else kernel_size_fast1
-        kernel_size_f2s = kernel_size_fast2 - kernel_size_slow2 + 1
+        kernel_size_slow1, kernel_size_slow2, kernel_size_slow3 = self._calc_kernel_sizes(self.slow_pathway_size)
+        kernel_size_fast1, kernel_size_fast2, kernel_size_fast3 = self._calc_kernel_sizes(self.fast_pathway_size)
 
-        self.fast_conv1 = nn.Conv3d(
-            in_channels=input_size,
-            out_channels=32,
-            kernel_size=(kernel_size_fast1, 3, 3),
+        kernel_size_f2s1 = self._calc_fuse_kernel_size(slow_in=input_size, slow_kernel=kernel_size_slow1,
+                                                       fast_in=input_size, fast_kernel=kernel_size_fast1)
+        kernel_size_f2s2 = self._calc_fuse_kernel_size(slow_in=256, slow_kernel=kernel_size_slow2,
+                                                       fast_in=32, fast_kernel=kernel_size_fast2)
+
+        self.fast_conv1, self.bn_f1 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_fast1,
+                                                             in_channels=input_size, out_channels=32)
+
+        self.slow_conv1, self.bn_s1 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_slow1,
+                                                             in_channels=input_size, out_channels=192)
+
+        self.fast_conv2, self.bn_f2 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_fast2,
+                                                             in_channels=32, out_channels=32)
+
+        self.slow_conv2, self.bn_s2 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_slow2,
+                                                             in_channels=256, out_channels=224)
+
+        self.fast_conv3, self.bn_f3 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_fast3,
+                                                             in_channels=32, out_channels=32)
+
+        self.slow_conv3, self.bn_s3 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_slow3,
+                                                             in_channels=256, out_channels=224)
+
+        self.conv_f2s1, self.bn_f2s1 = self._init_fuse_and_bn(kernel_size_f2s1)
+
+        self.conv_f2s2, self.bn_f2s2 = self._init_fuse_and_bn(kernel_size_f2s2)
+
+        self.relu = nn.ReLU(inplace=True)
+
+    def _init_conv_and_bn(self, temporal_kernelsize, in_channels, out_channels):
+        conv = nn.Conv3d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=(temporal_kernelsize, 3, 3),
             padding=(0, 1, 1))
 
-        self.bn_f1 = nn.BatchNorm3d(32)
+        bn = nn.BatchNorm3d(out_channels)
 
-        self.slow_conv1 = nn.Conv3d(
-            in_channels=input_size,
-            out_channels=192,
-            kernel_size=(kernel_size_slow1, 3, 3),
-            padding=(0, 1, 1))
+        return conv, bn
 
-        self.bn_s1 = nn.BatchNorm3d(192)
-
-        self.fast_conv2 = nn.Conv3d(
-            in_channels=32,
-            out_channels=32,
-            kernel_size=(kernel_size_fast2, 3, 3),
-            padding=(0, 1, 1))
-
-        self.bn_f2 = nn.BatchNorm3d(32)
-
-        self.slow_conv2 = nn.Conv3d(
-            in_channels=256,
-            out_channels=224,
-            kernel_size=(kernel_size_slow2, 3, 3),
-            padding=(0, 1, 1)
-        )
-
-        self.bn_s2 = nn.BatchNorm3d(224)
-
-        self.conv_f2s = nn.Conv3d(
+    def _init_fuse_and_bn(self, temporal_kernelsize):
+        conv_f2s = nn.Conv3d(
             32,
             64,
-            kernel_size=[kernel_size_f2s, 1, 1],
+            kernel_size=[temporal_kernelsize, 1, 1],
             stride=[1, 1, 1],
             padding=[0, 0, 0],
             bias=False,
         )
 
-        self.bn_f2s = nn.BatchNorm3d(64)
+        bn_f2s = nn.BatchNorm3d(64)
 
-        self.relu = nn.ReLU(inplace=True)
+        return conv_f2s, bn_f2s
+
+    def _calc_kernel_sizes(self, pathway_size):
+        div = pathway_size // 3
+        if pathway_size % 3 == 0:
+            return (div, div + 1, div + 1)
+        elif pathway_size % 3 == 1:
+            return (div + 1, div + 1, div + 1)
+        elif pathway_size % 3 == 2:
+            return (div + 1, div + 1, div + 2)
+
+    def _calc_fuse_kernel_size(self, slow_in, slow_kernel, fast_in, fast_kernel):
+        pass
 
     def fuse(self, slow, fast):
         fuse = self.conv_f2s(fast)
@@ -171,7 +188,8 @@ class SlowFastLayers(nn.Module):
         for key in slow_features.keys():
             key_scale_slow_features = torch.stack(slow_features[key]).to(self.device).transpose(1, 2)
             key_scale_fast_features = torch.stack(fast_features[key]).to(self.device).transpose(1, 2)
-            key_scale_slow_features, key_scale_fast_features = self.forward(key_scale_slow_features, key_scale_fast_features)
+            key_scale_slow_features, key_scale_fast_features = self.forward(key_scale_slow_features,
+                                                                            key_scale_fast_features)
 
             merged_features[key] = torch.cat([key_scale_slow_features, key_scale_fast_features], dim=1).squeeze(dim=2)
             del key_scale_slow_features, key_scale_fast_features
@@ -193,7 +211,8 @@ class SegmentationModel(nn.Module):
 
         if not self.use_proposals:
             # When we use gt_masks, we want mask predictions for every box
-            self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections, self.maskrcnn_model.roi_heads)
+            self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections,
+                                                                                    self.maskrcnn_model.roi_heads)
 
         # Freeze most of the weights
         for param in self.maskrcnn_model.backbone.parameters():
@@ -204,7 +223,8 @@ class SegmentationModel(nn.Module):
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
 
-        self.slow_fast = SlowFastLayers(256, device=device, slow_pathway_size=slow_pathway_size, fast_pathway_size=fast_pathway_size)
+        self.slow_fast = SlowFastLayers(256, device=device, slow_pathway_size=slow_pathway_size,
+                                        fast_pathway_size=fast_pathway_size)
 
         self.bs = batch_size
         self.maskrcnn_bs = maskrcnn_batch_size
@@ -266,7 +286,6 @@ class SegmentationModel(nn.Module):
         transformed_images, _ = self.maskrcnn_model.transform(images)
         image_features = self.compute_maskrcnn_features(transformed_images.tensors)
 
-
         '''Deal with imgs that have no objects in them'''
         valid_features_mask = []
         valid_targets = []
@@ -283,7 +302,8 @@ class SegmentationModel(nn.Module):
         _, targets = self.maskrcnn_model.transform(valid_imgs, valid_targets)
         if self.use_proposals and not self.use_rpn_proposals:  # also resize proposals if they are final boxes
             for i in range(len(targets)):
-                targets[i]["proposals"] = resize_boxes(targets[i]["proposals"], original_size=(original_image_sizes[0][0], original_image_sizes[0][1]),
+                targets[i]["proposals"] = resize_boxes(targets[i]["proposals"], original_size=(
+                    original_image_sizes[0][0], original_image_sizes[0][1]),
                                                        new_size=transformed_images.image_sizes[0])
         del valid_imgs, valid_targets
 
@@ -312,8 +332,10 @@ class SegmentationModel(nn.Module):
                 if valid_features_mask[feature_idx] == 1:
                     image_feature_idx = feature_idx + self.fast_pathway_size // 2
                     # right now slow sees the middle 4 frames, we should consider the option of seeing 4 frames through skipping
-                    slow_valid_features.append(self._slice_features(image_features, image_feature_idx, self.slow_pathway_size))
-                    fast_valid_features.append(self._slice_features(image_features, image_feature_idx, self.fast_pathway_size))
+                    slow_valid_features.append(
+                        self._slice_features(image_features, image_feature_idx, self.slow_pathway_size))
+                    fast_valid_features.append(
+                        self._slice_features(image_features, image_feature_idx, self.fast_pathway_size))
 
                     batch_targets.append(targets[feature_idx])  # TODO make runnable without targets
 
@@ -321,7 +343,8 @@ class SegmentationModel(nn.Module):
                 continue
             slow_fast_features = self.slow_fast.temporally_enhance_features(slow_valid_features, fast_valid_features)
             batch_original_image_sizes = original_image_sizes[i * self.bs:(i + 1) * self.bs]
-            batch_image_sizes = images.image_sizes[0:1] * len(batch_original_image_sizes)  # Because all images in one sequence have the same size
+            batch_image_sizes = images.image_sizes[0:1] * len(
+                batch_original_image_sizes)  # Because all images in one sequence have the same size
             self._targets_to_device(batch_targets, self.device)
             if self.use_proposals:
                 proposals = [elem['proposals'] for elem in batch_targets]  # predicted boxes
@@ -329,7 +352,8 @@ class SegmentationModel(nn.Module):
                 proposals = [elem['boxes'] for elem in batch_targets]  # ground truth boxes
             detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals,
                                                                         batch_image_sizes, batch_targets)
-            detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes, batch_original_image_sizes)
+            detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes,
+                                                                   batch_original_image_sizes)
             self._targets_to_device(detections, device=torch.device('cpu'))
             all_detections.extend(detections)
 

@@ -64,7 +64,8 @@ def main():
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, use_rpn_proposals=use_rpn_proposals)
     dataloader = DataLoader(dataset, batch_size=None)
-    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    # device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    device = torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
                                                  fast_pathway_size=fast_pathway_size, use_proposals=use_proposals, use_rpn_proposals=use_rpn_proposals)
     model.to(device)

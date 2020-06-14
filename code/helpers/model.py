@@ -86,10 +86,12 @@ class SlowFastLayers(nn.Module):
         kernel_size_slow1, kernel_size_slow2, kernel_size_slow3 = self._calc_kernel_sizes(self.slow_pathway_size)
         kernel_size_fast1, kernel_size_fast2, kernel_size_fast3 = self._calc_kernel_sizes(self.fast_pathway_size)
 
-        kernel_size_f2s1 = self._calc_fuse_kernel_size(slow_in=input_size, slow_kernel=kernel_size_slow1,
-                                                       fast_in=input_size, fast_kernel=kernel_size_fast1)
-        kernel_size_f2s2 = self._calc_fuse_kernel_size(slow_in=256, slow_kernel=kernel_size_slow2,
-                                                       fast_in=32, fast_kernel=kernel_size_fast2)
+        kernel_size_f2s1, slow_out1, slow_out1 = self._calc_fuse_kernel_size(slow_in=self.slow_pathway_size,
+                                                                             slow_kernel=kernel_size_slow1,
+                                                                             fast_in=self.fast_pathway_size,
+                                                                             fast_kernel=kernel_size_fast1)
+        kernel_size_f2s2, _, _ = self._calc_fuse_kernel_size(slow_in=slow_out1, slow_kernel=kernel_size_slow2,
+                                                             fast_in=slow_out1, fast_kernel=kernel_size_fast2)
 
         self.fast_conv1, self.bn_f1 = self._init_conv_and_bn(temporal_kernelsize=kernel_size_fast1,
                                                              in_channels=input_size, out_channels=32)
@@ -153,11 +155,11 @@ class SlowFastLayers(nn.Module):
         out_slow = (slow_in - slow_kernel) + 1
         out_fast = (fast_in - fast_kernel) + 1
         fuse_kernel_size = out_fast - out_slow + 1
-        return fuse_kernel_size
+        return fuse_kernel_size, out_slow, out_fast
 
-    def fuse(self, slow, fast):
-        fuse = self.conv_f2s(fast)
-        fuse = self.bn_f2s(fuse)
+    def fuse(self, slow, fast, conv, bn):
+        fuse = conv(fast)
+        fuse = bn(fuse)
         fuse = self.relu(fuse)
         x_s_fuse = torch.cat([slow, fuse], 1)
         return x_s_fuse, fast
@@ -172,15 +174,27 @@ class SlowFastLayers(nn.Module):
         fast = self.bn_f1(fast)
         fast = self.relu(fast)
 
-        # Fuse
-        slow, fast = self.fuse(slow, fast)
+        # Fuse1
+        slow, fast = self.fuse(slow, fast, self.conv_f2s1, self.bn_f2s1)
 
         # Second Conv Layer
         slow = self.slow_conv2(slow)
         slow = self.bn_s2(slow)
+        slow = self.relu(slow)
 
         fast = self.fast_conv2(fast)
         fast = self.bn_f2(fast)
+        fast = self.relu(fast)
+
+        # Fuse2
+        slow, fast = self.fuse(slow, fast, self.conv_f2s2, self.bn_f2s2)
+
+        # Second Conv Layer
+        slow = self.slow_conv3(slow)
+        slow = self.bn_s3(slow)
+
+        fast = self.fast_conv3(fast)
+        fast = self.bn_f3(fast)
         return slow, fast
 
     def temporally_enhance_features(self, slow_features, fast_features):

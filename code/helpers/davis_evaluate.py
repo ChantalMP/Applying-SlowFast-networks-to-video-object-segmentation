@@ -7,7 +7,7 @@ import numpy as np
 from copy import deepcopy
 from PIL import Image
 from pathlib import Path
-from helpers.constants import model_name, use_rpn_proposals
+from helpers.constants import model_name
 from davis2017_evaluation.davis2017.evaluation import DAVISEvaluation
 import pandas as pd
 from time import time
@@ -15,7 +15,7 @@ from time import time
 
 def davis_evaluation(model):
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016', use_rpn_proposals=use_rpn_proposals)
+    dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016')
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
 

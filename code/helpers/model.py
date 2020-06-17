@@ -215,19 +215,11 @@ class SlowFastLayers(nn.Module):
 
 
 class SegmentationModel(nn.Module):
-    def __init__(self, device, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals):
+    def __init__(self, device, slow_pathway_size, fast_pathway_size):
         super(SegmentationModel, self).__init__()
         self.device = device
         self.maskrcnn_model = get_model_instance_segmentation(num_classes=2)
         self.maskrcnn_model.load_state_dict(torch.load('maskrcnn/maskrcnn_model.pth'))
-        self.use_proposals = use_proposals
-        self.use_rpn_proposals = use_rpn_proposals
-        print(f'Using Predicted Boxes: {self.use_proposals}')
-
-        if not self.use_proposals:
-            # When we use gt_masks, we want mask predictions for every box
-            self.maskrcnn_model.roi_heads.postprocess_detections = types.MethodType(postprocess_detections,
-                                                                                    self.maskrcnn_model.roi_heads)
 
         # Freeze most of the weights
         for param in self.maskrcnn_model.backbone.parameters():
@@ -315,11 +307,7 @@ class SegmentationModel(nn.Module):
                 valid_imgs.append(images[idx])
 
         _, targets = self.maskrcnn_model.transform(valid_imgs, valid_targets)
-        if self.use_proposals and not self.use_rpn_proposals:  # also resize proposals if they are final boxes
-            for i in range(len(targets)):
-                targets[i]["proposals"] = resize_boxes(targets[i]["proposals"], original_size=(
-                    original_image_sizes[0][0], original_image_sizes[0][1]),
-                                                       new_size=transformed_images.image_sizes[0])
+
         del valid_imgs, valid_targets
 
         image_features = self.apply_padding(image_features)
@@ -361,10 +349,8 @@ class SegmentationModel(nn.Module):
             batch_image_sizes = images.image_sizes[0:1] * len(
                 batch_original_image_sizes)  # Because all images in one sequence have the same size
             self._targets_to_device(batch_targets, self.device)
-            if self.use_proposals:
-                proposals = [elem['proposals'] for elem in batch_targets]  # predicted boxes
-            else:
-                proposals = [elem['boxes'] for elem in batch_targets]  # ground truth boxes
+            proposals = [elem['proposals'] for elem in batch_targets]  # predicted boxes
+
             detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals,
                                                                         batch_image_sizes, batch_targets)
             detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes,

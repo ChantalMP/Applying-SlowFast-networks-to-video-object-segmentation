@@ -19,7 +19,7 @@ from DataAugmentationForObjectDetection.data_aug import data_aug
 
 
 class DAVISDataset(Dataset):
-    def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017', use_rpn_proposals=False):
+    def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017'):
         self.root = root
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
@@ -28,9 +28,7 @@ class DAVISDataset(Dataset):
                                                                                                              'ImageSets',
                                                                                                              resolution)
         self.transforms = transforms
-        self.use_rpn_proposals = use_rpn_proposals
-        name = 'proposals' if use_rpn_proposals else 'boxes'
-        loading_str = f'predicted_{name}_{subset}_{year}.pt'
+        loading_str = f'predicted_proposals_{subset}_{year}.pt'
         self.box_proposals = torch.load(f'maskrcnn/{loading_str}')
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
@@ -79,18 +77,21 @@ class DAVISDataset(Dataset):
                                                                                           np.float64),
                                                                                       np.array(proposals).astype(
                                                                                           np.float64))
-            img, img_masks, img_gt_boxes = self.scale(img, img_masks.astype(np.uint8), img_gt_boxes, img_proposals)
+            img, img_masks, img_gt_boxes, img_proposals = self.scale(img, img_masks.astype(np.uint8), img_gt_boxes,
+                                                                     img_proposals)
             if len(img_gt_boxes) > 0:
-                img, img_masks, img_gt_boxes = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
+                img, img_masks, img_gt_boxes, img_proposals = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
 
             img_masks = [mask[:, :, 0]]
-            img_boxes = [list(box[0, :].astype(np.int64))]
+            img_boxes = [list(img_gt_boxes[0, :].astype(np.int64))]
+            img_proposals = [list(img_proposals[0, :].astype(np.int64))]
 
             imgs[idx] = img
             masks[idx] = img_masks
             gt_boxes[idx] = img_boxes
+            proposals[idx] = img_proposals
 
-        return imgs, masks, gt_boxes
+        return imgs, masks, gt_boxes, proposals
 
     # returns a whole sequence
     def __getitem__(self, idx):
@@ -145,11 +146,8 @@ class DAVISDataset(Dataset):
             target["image_id"] = torch.tensor([1000 * idx + i])  # unique if no seq is longer than 1000 frames
             target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
             target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
-            if self.use_rpn_proposals:
-                target["proposals"] = proposals[i].cpu()
-            else:
-                target["proposals"] = self.expand_proposals(proposals[i], img_width=imgs[i].shape[1],
-                                                            img_height=imgs[i].shape[0])
+            target["proposals"] = proposals[i].cpu()
+
             targets.append(target)
 
         targets = tuple(targets)

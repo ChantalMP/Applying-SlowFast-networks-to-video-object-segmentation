@@ -195,14 +195,13 @@ def rpn_forward(self, images, targets=None):
 
 
 @torch.no_grad()
-def predict_boxes(model, data_loader, device, split, year, use_rpn_proposals=False):
+def predict_boxes(model, data_loader, device, split, year):
     model.roi_heads.score_thresh = 0.0
     model.roi_heads.detections_per_img = 10
     torch.set_num_threads(1)
     model.eval()
     all_boxes = defaultdict(list)
-    if use_rpn_proposals:
-        model.forward = types.MethodType(rpn_forward, model)
+    model.forward = types.MethodType(rpn_forward, model)
 
     for images, targets, valids, seq_names in tqdm(data_loader, total=len(data_loader)):
 
@@ -211,10 +210,7 @@ def predict_boxes(model, data_loader, device, split, year, use_rpn_proposals=Fal
         outputs = model(images)
 
         for i in range(len(seq_names)):
-            if use_rpn_proposals:
-                boxes = outputs[i]
-            else:
-                boxes = outputs[i]['boxes'].cpu()
+            boxes = outputs[i]
             assert len(boxes) > 0
             all_boxes[seq_names[i]].append(boxes)
 
@@ -238,6 +234,5 @@ def predict_boxes(model, data_loader, device, split, year, use_rpn_proposals=Fal
         #
         #     if not plotted:
         #         plt.show()
-    name = 'proposals' if use_rpn_proposals else 'boxes'
-    saving_str = f'predicted_{name}_{split}_{year}.pt'
+    saving_str = f'predicted_proposals_{split}_{year}.pt'
     torch.save(all_boxes, saving_str)

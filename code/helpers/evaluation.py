@@ -8,12 +8,12 @@ from matplotlib import pyplot as plt
 import numpy as np
 from helpers.utils import intersection_over_union
 from copy import deepcopy
-from helpers.constants import eval_output_path, model_name, pred_output_path, use_rpn_proposals
+from helpers.constants import eval_output_path, model_name, pred_output_path
 
 
 def evaluate(model, writer=None, global_step=None, save_all_imgs=False):
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms, use_rpn_proposals=use_rpn_proposals)
+    dataset = DAVISDataset(root='data/DAVIS', subset='val', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
 

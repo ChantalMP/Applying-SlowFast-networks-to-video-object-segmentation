@@ -8,12 +8,12 @@ from copy import deepcopy
 from PIL import Image
 from pathlib import Path
 from helpers.model import SegmentationModel
-from helpers.constants import best_model_path, slow_pathway_size, fast_pathway_size, model_name, use_proposals, use_rpn_proposals
+from helpers.constants import best_model_path, slow_pathway_size, fast_pathway_size, model_name
 
 
 def extract_for_davis_evaluation(model):
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016', use_rpn_proposals=use_rpn_proposals)
+    dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016')
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
 
@@ -39,7 +39,7 @@ def extract_for_davis_evaluation(model):
 if __name__ == '__main__':
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
-                                                 fast_pathway_size=fast_pathway_size, use_proposals=use_proposals, use_rpn_proposals=use_rpn_proposals)
+                                                 fast_pathway_size=fast_pathway_size)
     model.load_state_dict(torch.load(best_model_path))
     model.to(device)
     extract_for_davis_evaluation(model)

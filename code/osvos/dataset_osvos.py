@@ -11,7 +11,7 @@ from copy import deepcopy
 
 
 class DAVISSequenceDataset(Dataset):
-    def __init__(self, root, sequence_name, resolution='480p', year='2016', use_rpn_proposals=True):
+    def __init__(self, root, sequence_name, resolution='480p', year='2016'):
         self.root = root
         self.sequence_name = sequence_name
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
@@ -19,9 +19,7 @@ class DAVISSequenceDataset(Dataset):
         self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root,
                                                                                                              'ImageSets',
                                                                                                              resolution)
-        self.use_rpn_proposals = use_rpn_proposals
-        name = 'proposals' if use_rpn_proposals else 'boxes'
-        loading_str = f'predicted_{name}_val_{year}.pt'  # only use validation data for osvos anyway
+        loading_str = f'predicted_proposals_val_{year}.pt'  # only use validation data for osvos anyway
         self.box_proposals = torch.load(f'maskrcnn/{loading_str}')[self.sequence_name]
 
         self.sequence_info = {}

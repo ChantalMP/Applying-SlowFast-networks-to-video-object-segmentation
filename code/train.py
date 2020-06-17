@@ -26,7 +26,7 @@ from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.davis_evaluate import davis_evaluation
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals, \
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, \
     continue_training
 
 '''
@@ -62,11 +62,11 @@ def main():
     weight_decay = 0.0001
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, use_rpn_proposals=use_rpn_proposals)
+    dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
-                                                 fast_pathway_size=fast_pathway_size, use_proposals=use_proposals, use_rpn_proposals=use_rpn_proposals)
+                                                 fast_pathway_size=fast_pathway_size)
     model.to(device)
     model.train()
 

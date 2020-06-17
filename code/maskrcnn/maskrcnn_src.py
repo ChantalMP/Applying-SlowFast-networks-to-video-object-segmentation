@@ -167,7 +167,7 @@ def get_transform(train):
     return T.Compose(transforms)
 
 
-def main(train=True, year=None, split=None, use_rpn_proposals=None):
+def main(train=True, year=None, split=None):
     # train on the GPU or on the CPU, if a GPU is not available
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -232,10 +232,10 @@ def main(train=True, year=None, split=None, use_rpn_proposals=None):
 
     else:
         if split is None or split == 'train':
-            predict_boxes(model, data_loader, device=device, year=year, split=split, use_rpn_proposals=use_rpn_proposals)
+            predict_boxes(model, data_loader, device=device, year=year, split=split)
         else:
-            predict_boxes(model, data_loader_val, device=device, year=year, split=split, use_rpn_proposals=use_rpn_proposals)
+            predict_boxes(model, data_loader_val, device=device, year=year, split=split)
 
 
 if __name__ == "__main__":
-    main(train=False, year='2017', split='val', use_rpn_proposals=True)
+    main(train=False, year='2017', split='val')

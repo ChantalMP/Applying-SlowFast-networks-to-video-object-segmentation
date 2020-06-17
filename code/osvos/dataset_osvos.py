@@ -6,10 +6,12 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 import torch
+from DataAugmentationForObjectDetection.data_aug import bbox_util, data_aug
+from copy import deepcopy
 
 
-class DAVISDataset(Dataset):
-    def __init__(self, root, sequence_name, resolution='480p', transforms=None, year='2016', use_rpn_proposals=True):
+class DAVISSequenceDataset(Dataset):
+    def __init__(self, root, sequence_name, resolution='480p', year='2016', use_rpn_proposals=True):
         self.root = root
         self.sequence_name = sequence_name
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
@@ -17,7 +19,6 @@ class DAVISDataset(Dataset):
         self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root,
                                                                                                              'ImageSets',
                                                                                                              resolution)
-        self.transforms = transforms
         self.use_rpn_proposals = use_rpn_proposals
         name = 'proposals' if use_rpn_proposals else 'boxes'
         loading_str = f'predicted_{name}_val_{year}.pt'  # only use validation data for osvos anyway
@@ -29,6 +30,10 @@ class DAVISDataset(Dataset):
         masks = np.sort(glob(os.path.join(self.mask_path, sequence_name, '*.png'))).tolist()
         self.sequence_info['masks'] = masks
         self.sequence_info['name'] = sequence_name
+
+        self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
+        self.scale = data_aug.RandomScale(scale=(.75, 1.25))
+        self.rotate = data_aug.RandomRotate(angle=30)
 
     def __len__(self):
         return 1
@@ -72,8 +77,23 @@ class DAVISDataset(Dataset):
             img_boxes.append([xmin, ymin, xmax, ymax])
             img_masks.append(binary_masks[0])
 
-        target = {}
+        # transform img, mask and box
+        img, mask, box = self.random_horizontal_flip(image, np.expand_dims(img_masks[0], axis=2),
+                                                     np.array(img_boxes).astype(np.float64))
 
+        assert len(box) > 0
+        scaled_img, scaled_mask, scaled_box = self.scale(deepcopy(img), deepcopy(mask.astype(np.uint8)), deepcopy(box))
+        while len(scaled_box) == 0:
+            scaled_img, scaled_mask, scaled_box = self.scale(deepcopy(img), deepcopy(mask.astype(np.uint8)),
+                                                             deepcopy(box))
+        img, mask, box = scaled_img, scaled_mask, scaled_box
+
+        img, mask, box = self.rotate(img, mask, box)
+        img_masks = [mask[:, :, 0]]
+        img_boxes = [list(box[0, :].astype(np.int64))]
+
+
+        target = {}
         bxs = torch.as_tensor(img_boxes, dtype=torch.float32)
         target["boxes"] = bxs
         target["labels"] = torch.ones((len(bxs),), dtype=torch.int64)
@@ -83,10 +103,22 @@ class DAVISDataset(Dataset):
         target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
         target["proposals"] = self.box_proposals.cpu()
 
-        # TODO apply transforms to image, mask and box
+        # TODO apply transforms to image, mask and box and proposals
+        # TODO get previous and following frames
+        # TODO visualize augmentations
+        # TODO adapt methods to also augment proposals and neighbouring frames
 
         return image, target
 
 
 if __name__ == '__main__':
-    pass
+    from torchvision import transforms
+    from osvos import osvos_transforms as tr
+
+    # Transforms from OSVOS paper:
+    composed_transforms = transforms.Compose([tr.RandomHorizontalFlip(),
+                                              tr.ScaleNRotate(rots=(-30, 30), scales=(.75, 1.25)),
+                                              tr.ToTensor()])
+    ds = DAVISSequenceDataset(root='data/DAVIS_2016', sequence_name='camel')
+
+    img, target = ds[0]

@@ -33,11 +33,15 @@ class RandomHorizontalFlip(object):
 
     def __init__(self, p=0.5):
         self.p = p
+        self.reset()
+
+    def reset(self):
+        self.p_thresh = random.random()
 
     def __call__(self, img, mask, bboxes):
         img_center = np.array(img.shape[:2])[::-1] / 2
         img_center = np.hstack((img_center, img_center))
-        if random.random() < self.p:
+        if self.p_thresh < self.p:
             img = img[:, ::-1, :]
             mask = mask[:, ::-1, :]
             bboxes[:, [0, 2]] += 2 * (img_center[[0, 2]] - bboxes[:, [0, 2]])
@@ -130,6 +134,16 @@ class RandomScale(object):
 
         self.diff = diff
 
+        self.reset()  # set probabilistic values
+
+    def reset(self):
+        if self.diff:
+            self.scale_x = random.uniform(*self.scale)
+            self.scale_y = random.uniform(*self.scale)
+        else:
+            self.scale_x = random.uniform(*self.scale)
+            self.scale_y = self.scale_x
+
     def __call__(self, img, mask, bboxes):
 
         # Chose a random digit to scale by
@@ -137,15 +151,8 @@ class RandomScale(object):
         img_shape = img.shape
         mask_shape = mask.shape
 
-        if self.diff:
-            scale_x = random.uniform(*self.scale)
-            scale_y = random.uniform(*self.scale)
-        else:
-            scale_x = random.uniform(*self.scale)
-            scale_y = scale_x
-
-        resize_scale_x = 1 + scale_x
-        resize_scale_y = 1 + scale_y
+        resize_scale_x = 1 + self.scale_x
+        resize_scale_y = 1 + self.scale_y
 
         img = cv2.resize(img, None, fx=resize_scale_x, fy=resize_scale_y)
         mask = np.expand_dims(cv2.resize(mask, None, fx=resize_scale_x, fy=resize_scale_y), axis=2)
@@ -406,21 +413,24 @@ class RandomRotate(object):
         else:
             self.angle = (-self.angle, self.angle)
 
-    def __call__(self, img, mask, bboxes):
+        self.reset()
 
-        angle = random.uniform(*self.angle)
+    def reset(self):
+        self.chosen_angle = random.uniform(*self.angle)
+
+    def __call__(self, img, mask, bboxes):
 
         w, h = img.shape[1], img.shape[0]
         cx, cy = w // 2, h // 2
 
-        img = rotate_im(img, angle)
-        mask = np.expand_dims(rotate_im(mask, angle), axis=2)
+        img = rotate_im(img, self.chosen_angle)
+        mask = np.expand_dims(rotate_im(mask, self.chosen_angle), axis=2)
 
         corners = get_corners(bboxes)
 
         corners = np.hstack((corners, bboxes[:, 4:]))
 
-        corners[:, :8] = rotate_box(corners[:, :8], angle, cx, cy, h, w)
+        corners[:, :8] = rotate_box(corners[:, :8], self.chosen_angle, cx, cy, h, w)
 
         new_bbox = get_enclosing_box(corners)
 

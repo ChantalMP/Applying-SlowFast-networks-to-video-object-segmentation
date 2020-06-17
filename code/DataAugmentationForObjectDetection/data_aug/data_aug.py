@@ -156,7 +156,9 @@ class RandomScale(object):
         # Chose a random digit to scale by
 
         img_shape = img.shape
-        mask_shape = masks[0].shape
+        if len(masks) > 0:
+            mask_shape = masks[0].shape
+            mask_canvas = np.zeros(mask_shape, dtype=np.uint8)
 
         resize_scale_x = 1 + self.scale_x
         resize_scale_y = 1 + self.scale_y
@@ -171,7 +173,6 @@ class RandomScale(object):
         proposals[:, :4] *= [resize_scale_x, resize_scale_y, resize_scale_x, resize_scale_y]
 
         canvas = np.zeros(img_shape, dtype=np.uint8)
-        mask_canvas = np.zeros(mask_shape, dtype=np.uint8)
 
         y_lim = int(min(resize_scale_y, 1) * img_shape[0])
         x_lim = int(min(resize_scale_x, 1) * img_shape[1])

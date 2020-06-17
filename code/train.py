@@ -92,7 +92,7 @@ def main():
         epoch = 0
 
     # First do an evaluation to check everything works
-    davis_evaluation(model)
+    # davis_evaluation(model)
     for epoch in tqdm(range(epoch, epochs), total=epochs - epoch, desc="Epochs"):
         total_loss = 0.
         for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):

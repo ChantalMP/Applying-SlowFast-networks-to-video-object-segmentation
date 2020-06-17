@@ -46,8 +46,8 @@ class DAVISDataset(Dataset):
             self.sequences.append(info)
 
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        self.scale = data_aug.RandomScale(scale=(.75, 1.25))
-        self.rotate = data_aug.RandomRotate(angle=30)
+        self.scale = data_aug.RandomScale(scale=0.2)
+        self.rotate = data_aug.RandomRotate(angle=15)
 
     def __len__(self):
         return len(self.sequences)
@@ -75,7 +75,6 @@ class DAVISDataset(Dataset):
                 img_boxes = []
 
             img_masks = [mask[:, :, 0] for mask in img_masks]
-            img_proposals = [list(img_proposals[0, :].astype(np.int64))]
 
             imgs[idx] = img
             masks[idx] = img_masks
@@ -122,7 +121,9 @@ class DAVISDataset(Dataset):
             masks.append(img_masks)
             boxes.append(img_boxes)
 
-        imgs, masks, boxes, proposals = self.apply_augmentations(imgs, masks, boxes, proposals)
+        if self.subset == 'train':
+            imgs, masks, boxes, proposals = self.apply_augmentations(imgs, masks, boxes, proposals)
+            proposals = [torch.tensor(p, dtype=torch.float32) for p in proposals]
 
         targets = []
         for i in range(len(imgs)):
@@ -145,10 +146,10 @@ class DAVISDataset(Dataset):
 
         if self.transforms:
             for img_idx in range(len(imgs)):
-                imgs[img_idx] = self.transforms(imgs[img_idx])
+                imgs[img_idx] = self.transforms(imgs[img_idx].copy())
 
-        visualize_image_with_properties(imgs[0].cpu().numpy().transpose(1, 2, 0), masks=targets[0]['masks'], boxes=targets[0]['boxes'],
-                                        proposals=targets[0]['proposals'])
+        # visualize_image_with_properties(imgs[0].cpu().numpy().transpose(1, 2, 0), masks=targets[0]['masks'], boxes=targets[0]['boxes'],
+        #                                proposals=targets[0]['proposals'][:10])
         return imgs, targets, seq_name
 
 

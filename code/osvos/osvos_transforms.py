@@ -1,3 +1,5 @@
+# https://github.com/kmaninis/OSVOS-PyTorch/blob/master/dataloaders/davis_2016.py
+
 import random
 import cv2
 import numpy as np

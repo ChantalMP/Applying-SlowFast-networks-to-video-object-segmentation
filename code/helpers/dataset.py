@@ -10,6 +10,8 @@ import matplotlib.patches as patches
 import torch
 from math import ceil
 from tqdm import tqdm
+from DataAugmentationForObjectDetection.data_aug import data_aug
+
 
 
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py
@@ -22,7 +24,9 @@ class DAVISDataset(Dataset):
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
-        self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root, 'ImageSets', resolution)
+        self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root,
+                                                                                                             'ImageSets',
+                                                                                                             resolution)
         self.transforms = transforms
         self.use_rpn_proposals = use_rpn_proposals
         name = 'proposals' if use_rpn_proposals else 'boxes'
@@ -31,7 +35,8 @@ class DAVISDataset(Dataset):
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
-        sequences_names = [x.strip() for x in tmp] if year == '2017' else sorted({x.split()[0].split('/')[-2] for x in tmp})
+        sequences_names = [x.strip() for x in tmp] if year == '2017' else sorted(
+            {x.split()[0].split('/')[-2] for x in tmp})
         self.sequences = []
         for seq in sequences_names:
             info = {}
@@ -41,6 +46,10 @@ class DAVISDataset(Dataset):
             info['masks'] = masks
             info['name'] = seq
             self.sequences.append(info)
+
+        self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
+        self.scale = data_aug.RandomScale(scale=(.75, 1.25))
+        self.rotate = data_aug.RandomRotate(angle=30)
 
     def __len__(self):
         return len(self.sequences)
@@ -56,6 +65,32 @@ class DAVISDataset(Dataset):
             proposals[i] = bigger_box
 
         return proposals
+
+    def apply_augmentations(self, imgs, masks, gt_boxes, proposals):
+        self.rotate.reset()
+        self.scale.reset()
+        self.random_horizontal_flip.reset()
+
+        for idx in enumerate(imgs):
+            img, img_masks, img_gt_boxes, img_proposals = self.random_horizontal_flip(image,
+                                                                                      np.expand_dims(img_masks[0],
+                                                                                                     axis=2),
+                                                                                      np.array(img_boxes).astype(
+                                                                                          np.float64),
+                                                                                      np.array(proposals).astype(
+                                                                                          np.float64))
+            img, img_masks, img_gt_boxes = self.scale(img, img_masks.astype(np.uint8), img_gt_boxes, img_proposals)
+            if len(img_gt_boxes) > 0:
+                img, img_masks, img_gt_boxes = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
+
+            img_masks = [mask[:, :, 0]]
+            img_boxes = [list(box[0, :].astype(np.int64))]
+
+            imgs[idx] = img
+            masks[idx] = img_masks
+            gt_boxes[idx] = img_boxes
+
+        return imgs, masks, gt_boxes
 
     # returns a whole sequence
     def __getitem__(self, idx):
@@ -94,6 +129,8 @@ class DAVISDataset(Dataset):
 
             masks.append(img_masks)
             boxes.append(img_boxes)
+
+        imgs, masks, boxes, proposals = self.apply_augmentations(imgs, masks, boxes, proposals)
 
         targets = []
         for i in range(len(imgs)):

@@ -26,7 +26,8 @@ from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
 from helpers.davis_evaluate import davis_evaluation
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, use_proposals, use_rpn_proposals, \
+    continue_training
 
 '''
 New architecture proposal:
@@ -59,7 +60,6 @@ def main():
     epochs = 15
     lr = 0.001
     weight_decay = 0.0001
-    continue_training = False
 
     transforms = Compose([ToTensor()])
     dataset = DAVISDataset(root='data/DAVIS', subset='train', transforms=transforms, use_rpn_proposals=use_rpn_proposals)

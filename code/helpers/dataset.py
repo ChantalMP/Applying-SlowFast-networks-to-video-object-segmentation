@@ -11,6 +11,7 @@ import torch
 from math import ceil
 from tqdm import tqdm
 from DataAugmentationForObjectDetection.data_aug import data_aug
+from helpers.utils import visualize_image_with_properties
 
 
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py
@@ -141,6 +142,8 @@ class DAVISDataset(Dataset):
             for img_idx in range(len(imgs)):
                 imgs[img_idx] = self.transforms(imgs[img_idx])
 
+        visualize_image_with_properties(imgs[0].cpu().numpy().transpose(1, 2, 0), masks=targets[0]['masks'], boxes=targets[0]['boxes'],
+                                        proposals=targets[0]['proposals'])
         return imgs, targets, seq_name
 
 

@@ -5,7 +5,7 @@
 /maskrcnn/PennFudanPed/
 /maskrcnn/maskrcnn_model_5.pth
 /maskrcnn/results/
-/models/
+/models_without_augmentation/
 /runs/
 /davis2017_evaluation/results/
 /maskrcnn/maskrcnn_model_5_old.pth

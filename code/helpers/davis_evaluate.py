@@ -18,6 +18,7 @@ def davis_evaluation(model):
     dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016')
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
+    time_start = time()
 
     for seq_idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Calculating Segmentations"):
 
@@ -37,7 +38,6 @@ def davis_evaluation(model):
 
             Image.fromarray(total_mask).save(seq_output_path / f'{str(img_idx).zfill(5)}.png')
 
-    time_start = time()
     print(f'Evaluating sequences...')
     # Create dataset and evaluate
     dataset_eval = DAVISEvaluation(davis_root='data/DAVIS_2016', task='unsupervised', gt_set='val', year='2016')
@@ -67,4 +67,4 @@ def davis_evaluation(model):
     total_time = time() - time_start
     print('\nTotal time:' + str(total_time))
 
-    return table_g['J&F-Mean'][0]
+    return table_g['J&F-Mean'][0], total_time

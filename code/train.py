@@ -18,24 +18,30 @@
 
 # Evaluation
 # Slow rate of fast how is it etc etc.
-from helpers.dataset import DAVISDataset
-from torch.utils.data import DataLoader
-from helpers.model import SegmentationModel
+
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, continue_training, random_seed, writer_dir
+import random
 import torch
+import numpy as np
+import os
+
+# As deterministic as possible
+random.seed(random_seed)
+torch.manual_seed(random_seed)
+torch.cuda.manual_seed_all(random_seed)
+np.random.seed(random_seed)
+os.environ['PYTHONHASHSEED'] = str(random_seed)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
-from helpers.davis_evaluate import davis_evaluation
 from torch.utils.tensorboard import SummaryWriter
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, \
-    continue_training
 
-'''
-New architecture proposal:
-Fully train a maskrcnn for davis
-Use its transformations and backbone to extract fpn features for every image and save it
-Enchance features with temporal context
-Use its heads but this time with enchaned features
-'''
+from helpers.dataset import DAVISDataset
+from helpers.model import SegmentationModel
+from helpers.davis_evaluate import davis_evaluation
 
 
 def main():
@@ -45,17 +51,11 @@ def main():
     2. With but slow fast same size (as big as it fits)
     3. Smaller slow but bigger fast
     '''
-    # TODO use predicted boxes in training TOTEST
     # TODO test gpu usage
-    # TODO train on davis16 dataset and only use box with the highest prob (probably finetune maskrcnn on davis16 as well)
-    # TODO Just reduce score_threshold of current architecture for eval
-    # TODO Only feed most probably boxes and use like ground truth (no sorting out etc)
-    # TODO if osvos with first picture no context is learned on the left -> overfit on middle frame
     # TODO start with our trained network and finetune it for osvos
-    # TODO stride
-    # TODO play with threshold for model for evaluation
-    # TODO test bigger slowfast
-    # TODO avg of N runs
+    # TODO test writer working correctly (also for colab)
+    # TODO test eval time working correctly
+    # TODO test fixing working correctly
 
     epochs = 15
     lr = 0.001
@@ -78,7 +78,7 @@ def main():
 
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
 
-    writer: SummaryWriter = SummaryWriter()
+    writer: SummaryWriter = SummaryWriter(writer_dir)
     global_step = 0
     best_iou = -1
 
@@ -105,7 +105,8 @@ def main():
 
         print(f'\nLoss: {total_loss:.4f}\n')
         writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
-        val_iou = davis_evaluation(model)
+        val_iou, eval_time = davis_evaluation(model)
+        writer.add_scalar('Eval Time', eval_time, global_step=global_step)
         if val_iou > best_iou:
             best_iou = val_iou
             print(f'Saving model with iou: {val_iou}')

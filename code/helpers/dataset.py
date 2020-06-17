@@ -59,6 +59,8 @@ class DAVISDataset(Dataset):
 
         for idx in range(len((imgs))):
             img, img_masks, img_gt_boxes, img_proposals = imgs[idx], masks[idx], gt_boxes[idx], proposals[idx]
+            img_masks = [np.expand_dims(mask, axis=2) for mask in img_masks]
+
             img, img_masks, img_gt_boxes, img_proposals = self.random_horizontal_flip(img, img_masks,
                                                                                       np.array(img_gt_boxes).astype(
                                                                                           np.float64),
@@ -68,8 +70,11 @@ class DAVISDataset(Dataset):
             img, img_masks, img_gt_boxes, img_proposals = self.scale(img, img_masks, img_gt_boxes, img_proposals)
             if len(img_gt_boxes) > 0:
                 img, img_masks, img_gt_boxes, img_proposals = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
+                img_boxes = [list(img_gt_boxes[0, :].astype(np.int64))]
+            else:
+                img_boxes = []
 
-            img_boxes = [list(img_gt_boxes[0, :].astype(np.int64))]
+            img_masks = [mask[:, :, 0] for mask in img_masks]
             img_proposals = [list(img_proposals[0, :].astype(np.int64))]
 
             imgs[idx] = img

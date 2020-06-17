@@ -37,7 +37,6 @@ class RandomHorizontalFlip(object):
 
     def reset(self):
         self.p_thresh = random.random()
-        self.p_thresh = 0
 
     def __call__(self, img, masks, bboxes, proposals):
         img_center = np.array(img.shape[:2])[::-1] / 2
@@ -45,7 +44,7 @@ class RandomHorizontalFlip(object):
         if self.p_thresh < self.p:
             img = img[:, ::-1, :]
             for mask_idx in range(len(masks)):
-                masks[mask_idx] = np.expand_dims(masks[mask_idx], axis=2)[:, ::-1, :]
+                masks[mask_idx] = masks[mask_idx][:, ::-1, :]
             bboxes[:, [0, 2]] += 2 * (img_center[[0, 2]] - bboxes[:, [0, 2]])
 
             box_w = abs(bboxes[:, 0] - bboxes[:, 2])
@@ -153,9 +152,6 @@ class RandomScale(object):
             self.scale_x = random.uniform(*self.scale)
             self.scale_y = self.scale_x
 
-        self.scale_x = 1.25
-        self.scale_y = 1.25
-
     def __call__(self, img, masks, bboxes, proposals):
 
         # Chose a random digit to scale by
@@ -186,8 +182,8 @@ class RandomScale(object):
             masks[mask_idx] = mask_canvas
 
         img = canvas
-        bboxes = clip_box(bboxes, [0, 0, 1 + img_shape[1], img_shape[0]], 0.25)
-        proposals = clip_box(proposals, [0, 0, 1 + img_shape[1], img_shape[0]], 0.25)
+        bboxes = clip_box(bboxes, [0, 0, 1 + img_shape[1], img_shape[0]], 0.05)
+        proposals = clip_box(proposals, [0, 0, 1 + img_shape[1], img_shape[0]], 0.05)
 
         return img, masks, bboxes, proposals
 
@@ -435,13 +431,14 @@ class RandomRotate(object):
     def reset(self):
         self.chosen_angle = random.uniform(*self.angle)
 
-    def __call__(self, img, mask, bboxes, proposals):
+    def __call__(self, img, masks, bboxes, proposals):
 
         w, h = img.shape[1], img.shape[0]
         cx, cy = w // 2, h // 2
 
         img = rotate_im(img, self.chosen_angle)
-        mask = np.expand_dims(rotate_im(mask, self.chosen_angle), axis=2)
+        for mask_idx in range(len(masks)):
+            masks[mask_idx] = np.expand_dims(rotate_im(masks[mask_idx], self.chosen_angle), axis=2)
 
         corners = get_corners(bboxes)
         corners = np.hstack((corners, bboxes[:, 4:]))
@@ -458,17 +455,18 @@ class RandomRotate(object):
         scale_factor_y = img.shape[0] / h
 
         img = cv2.resize(img, (w, h))
-        mask = np.expand_dims(cv2.resize(mask, (w, h)), axis=2)
+        for mask_idx in range(len(masks)):
+            masks[mask_idx] = np.expand_dims(cv2.resize(masks[mask_idx], (w, h)), axis=2)
 
         new_bbox[:, :4] /= [scale_factor_x, scale_factor_y, scale_factor_x, scale_factor_y]
         bboxes = new_bbox
-        bboxes = clip_box(bboxes, [0, 0, w, h], 0.25)
+        bboxes = clip_box(bboxes, [0, 0, w, h], 0.05)
 
         new_proposal[:, :4] /= [scale_factor_x, scale_factor_y, scale_factor_x, scale_factor_y]
         proposals = new_proposal
-        proposals = clip_box(proposals, [0, 0, w, h], 0.25)
+        proposals = clip_box(proposals, [0, 0, w, h], 0.05)
 
-        return img, mask, bboxes, proposals
+        return img, masks, bboxes, proposals
 
 
 class Rotate(object):

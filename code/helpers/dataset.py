@@ -68,8 +68,8 @@ class DAVISDataset(Dataset):
                                                                                           img_proposals.cpu()).astype(
                                                                                           np.float64))
             img, img_masks, img_gt_boxes, img_proposals = self.scale(img, img_masks, img_gt_boxes, img_proposals)
+            img, img_masks, img_gt_boxes, img_proposals = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
             if len(img_gt_boxes) > 0:
-                img, img_masks, img_gt_boxes, img_proposals = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
                 img_boxes = [list(img_gt_boxes[0, :].astype(np.int64))]
             else:
                 img_boxes = []

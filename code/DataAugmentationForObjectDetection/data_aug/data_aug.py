@@ -37,13 +37,15 @@ class RandomHorizontalFlip(object):
 
     def reset(self):
         self.p_thresh = random.random()
+        self.p_thresh = 0
 
-    def __call__(self, img, mask, bboxes, proposals):
+    def __call__(self, img, masks, bboxes, proposals):
         img_center = np.array(img.shape[:2])[::-1] / 2
         img_center = np.hstack((img_center, img_center))
         if self.p_thresh < self.p:
             img = img[:, ::-1, :]
-            mask = mask[:, ::-1, :]
+            for mask_idx in range(len(masks)):
+                masks[mask_idx] = np.expand_dims(masks[mask_idx], axis=2)[:, ::-1, :]
             bboxes[:, [0, 2]] += 2 * (img_center[[0, 2]] - bboxes[:, [0, 2]])
 
             box_w = abs(bboxes[:, 0] - bboxes[:, 2])
@@ -58,7 +60,7 @@ class RandomHorizontalFlip(object):
             proposals[:, 0] -= box_w
             proposals[:, 2] += box_w
 
-        return img, mask, bboxes, proposals
+        return img, masks, bboxes, proposals
 
 
 class HorizontalFlip(object):
@@ -151,18 +153,23 @@ class RandomScale(object):
             self.scale_x = random.uniform(*self.scale)
             self.scale_y = self.scale_x
 
-    def __call__(self, img, mask, bboxes, proposals):
+        self.scale_x = 1.25
+        self.scale_y = 1.25
+
+    def __call__(self, img, masks, bboxes, proposals):
 
         # Chose a random digit to scale by
 
         img_shape = img.shape
-        mask_shape = mask.shape
+        mask_shape = masks[0].shape
 
         resize_scale_x = 1 + self.scale_x
         resize_scale_y = 1 + self.scale_y
 
         img = cv2.resize(img, None, fx=resize_scale_x, fy=resize_scale_y)
-        mask = np.expand_dims(cv2.resize(mask, None, fx=resize_scale_x, fy=resize_scale_y), axis=2)
+        for mask_idx in range(len(masks)):
+            mask = masks[mask_idx].astype(np.uint8)
+            masks[mask_idx] = np.expand_dims(cv2.resize(mask, None, fx=resize_scale_x, fy=resize_scale_y), axis=2)
 
         bboxes[:, :4] *= [resize_scale_x, resize_scale_y, resize_scale_x, resize_scale_y]
         proposals[:, :4] *= [resize_scale_x, resize_scale_y, resize_scale_x, resize_scale_y]
@@ -174,14 +181,15 @@ class RandomScale(object):
         x_lim = int(min(resize_scale_x, 1) * img_shape[1])
 
         canvas[:y_lim, :x_lim, :] = img[:y_lim, :x_lim, :]
-        mask_canvas[:y_lim, :x_lim, :] = mask[:y_lim, :x_lim, :]
+        for mask_idx in range(len(masks)):
+            mask_canvas[:y_lim, :x_lim, :] = masks[mask_idx][:y_lim, :x_lim, :]
+            masks[mask_idx] = mask_canvas
 
         img = canvas
-        mask = mask_canvas
         bboxes = clip_box(bboxes, [0, 0, 1 + img_shape[1], img_shape[0]], 0.25)
         proposals = clip_box(proposals, [0, 0, 1 + img_shape[1], img_shape[0]], 0.25)
 
-        return img, mask, bboxes, proposals
+        return img, masks, bboxes, proposals
 
 
 class Scale(object):

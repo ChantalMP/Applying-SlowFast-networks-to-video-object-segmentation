@@ -13,7 +13,6 @@ from tqdm import tqdm
 from DataAugmentationForObjectDetection.data_aug import data_aug
 
 
-
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py
 # Reference how to compute the bounding boxes: https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
 
@@ -52,37 +51,23 @@ class DAVISDataset(Dataset):
     def __len__(self):
         return len(self.sequences)
 
-    def expand_proposals(self, proposals, img_width, img_height, ratio=0.1):
-        for i in range(len(proposals)):
-            box = proposals[i]
-            width_change = (box[2] - box[0]) * ratio
-            height_change = (box[3] - box[1]) * ratio
-            bigger_box = torch.tensor(
-                [max(0, box[0] - width_change), max(0, box[1] - height_change), min(img_width, box[2] + width_change),
-                 min(img_height, box[3] + height_change)])
-            proposals[i] = bigger_box
-
-        return proposals
-
     def apply_augmentations(self, imgs, masks, gt_boxes, proposals):
         self.rotate.reset()
         self.scale.reset()
         self.random_horizontal_flip.reset()
 
-        for idx in enumerate(imgs):
-            img, img_masks, img_gt_boxes, img_proposals = self.random_horizontal_flip(image,
-                                                                                      np.expand_dims(img_masks[0],
-                                                                                                     axis=2),
-                                                                                      np.array(img_boxes).astype(
+        for idx in range(len((imgs))):
+            img, img_masks, img_gt_boxes, img_proposals = imgs[idx], masks[idx], gt_boxes[idx], proposals[idx]
+            img, img_masks, img_gt_boxes, img_proposals = self.random_horizontal_flip(img, img_masks,
+                                                                                      np.array(img_gt_boxes).astype(
                                                                                           np.float64),
-                                                                                      np.array(proposals).astype(
+                                                                                      np.array(
+                                                                                          img_proposals.cpu()).astype(
                                                                                           np.float64))
-            img, img_masks, img_gt_boxes, img_proposals = self.scale(img, img_masks.astype(np.uint8), img_gt_boxes,
-                                                                     img_proposals)
+            img, img_masks, img_gt_boxes, img_proposals = self.scale(img, img_masks, img_gt_boxes, img_proposals)
             if len(img_gt_boxes) > 0:
                 img, img_masks, img_gt_boxes, img_proposals = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
 
-            img_masks = [mask[:, :, 0]]
             img_boxes = [list(img_gt_boxes[0, :].astype(np.int64))]
             img_proposals = [list(img_proposals[0, :].astype(np.int64))]
 

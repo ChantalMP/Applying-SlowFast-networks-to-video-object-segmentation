@@ -36,18 +36,6 @@ class DAVISSequenceDataset(Dataset):
     def __len__(self):
         return 1
 
-    def expand_proposals(self, proposals, img_width, img_height, ratio=0.1):
-        for i in range(len(proposals)):
-            box = proposals[i]
-            width_change = (box[2] - box[0]) * ratio
-            height_change = (box[3] - box[1]) * ratio
-            bigger_box = torch.tensor(
-                [max(0, box[0] - width_change), max(0, box[1] - height_change), min(img_width, box[2] + width_change),
-                 min(img_height, box[3] + height_change)])
-            proposals[i] = bigger_box
-
-        return proposals
-
     # returns the first image of the sequence
     def __getitem__(self, idx):
         image = self.sequence_info['images'][0]  # or which frame we want to use for finetuning

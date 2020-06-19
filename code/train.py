@@ -99,6 +99,7 @@ def main():
             model.train()
             imgs, targets, _ = seq
             batch_loss, _ = model(imgs, targets, optimizer=opt)  # Backward happens inside
+            writer.add_scalar('Batch Loss/Train', batch_loss, global_step=global_step)
             total_loss += batch_loss
 
             global_step += 1

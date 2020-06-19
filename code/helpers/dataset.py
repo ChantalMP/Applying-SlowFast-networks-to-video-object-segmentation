@@ -28,8 +28,6 @@ class DAVISDataset(Dataset):
                                                                                                              'ImageSets',
                                                                                                              resolution)
         self.transforms = transforms
-        loading_str = f'predicted_proposals_{subset}_{year}.pt'
-        self.box_proposals = torch.load(f'maskrcnn/{loading_str}')
 
         with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
             tmp = f.readlines()
@@ -52,36 +50,29 @@ class DAVISDataset(Dataset):
     def __len__(self):
         return len(self.sequences)
 
-    def apply_augmentations(self, imgs, masks, gt_boxes, proposals):
+    def apply_augmentations(self, imgs, masks, gt_boxes):
         self.rotate.reset()
         self.scale.reset()
         self.random_horizontal_flip.reset()
 
         for idx in range(len((imgs))):
-            img, img_masks, img_gt_boxes, img_proposals = imgs[idx], masks[idx], gt_boxes[idx], proposals[idx]
+            img, img_masks, img_gt_boxes = imgs[idx], masks[idx], gt_boxes[idx]
             img_masks = [np.expand_dims(mask, axis=2) for mask in img_masks]
-
-            img, img_masks, img_gt_boxes, img_proposals = self.random_horizontal_flip(img, img_masks,
-                                                                                      np.array(img_gt_boxes).astype(
-                                                                                          np.float64),
-                                                                                      np.array(
-                                                                                          img_proposals.cpu()).astype(
-                                                                                          np.float64))
-            img, img_masks, img_gt_boxes, img_proposals = self.scale(img, img_masks, img_gt_boxes, img_proposals)
-            img, img_masks, img_gt_boxes, img_proposals = self.rotate(img, img_masks, img_gt_boxes, img_proposals)
+            img, img_masks, img_gt_boxes = self.random_horizontal_flip(img, img_masks, np.array(img_gt_boxes).astype(np.float64))
+            img, img_masks, img_gt_boxes = self.scale(img, img_masks, img_gt_boxes)
+            img, img_masks, img_gt_boxes = self.rotate(img, img_masks, img_gt_boxes)
             if len(img_gt_boxes) > 0:
                 img_boxes = [list(img_gt_boxes[0, :].astype(np.int64))]
             else:
                 img_boxes = []
 
-            img_masks = [mask[:, :, 0] for mask in img_masks]
+            img_masks = [mask[:, :, 0].astype(np.bool) for mask in img_masks]
 
             imgs[idx] = img
             masks[idx] = img_masks
             gt_boxes[idx] = img_boxes
-            proposals[idx] = img_proposals
 
-        return imgs, masks, gt_boxes, proposals
+        return imgs, masks, gt_boxes
 
     # returns a whole sequence
     def __getitem__(self, idx):
@@ -89,7 +80,6 @@ class DAVISDataset(Dataset):
         masks = []
         boxes = []
         seq_name = self.sequences[idx]['name']
-        proposals = self.box_proposals[seq_name]
 
         for img, msk in zip(self.sequences[idx]['images'], self.sequences[idx]['masks']):
             image = Image.open(img)
@@ -121,9 +111,9 @@ class DAVISDataset(Dataset):
             masks.append(img_masks)
             boxes.append(img_boxes)
 
-        if self.subset == 'train':
-            imgs, masks, boxes, proposals = self.apply_augmentations(imgs, masks, boxes, proposals)
-            proposals = [torch.tensor(p, dtype=torch.float32) for p in proposals]
+        # TODO activate it
+        # if self.subset == 'train':
+        #     imgs, masks, boxes = self.apply_augmentations(imgs, masks, boxes)
 
         targets = []
         for i in range(len(imgs)):
@@ -138,7 +128,6 @@ class DAVISDataset(Dataset):
             target["image_id"] = torch.tensor([1000 * idx + i])  # unique if no seq is longer than 1000 frames
             target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
             target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
-            target["proposals"] = proposals[i].cpu()
 
             targets.append(target)
 

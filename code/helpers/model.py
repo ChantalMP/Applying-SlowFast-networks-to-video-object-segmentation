@@ -1,61 +1,13 @@
 from math import ceil, floor
-import types
 import torch
 from torch import nn
 import torchvision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from collections import OrderedDict
-import torch.nn.functional as F
-from torchvision.ops import boxes as box_ops
 from helpers.constants import batch_size, maskrcnn_batch_size
-from torchvision.models.detection.transform import resize_boxes
 
-
-def postprocess_detections(self, class_logits, box_regression, proposals, image_shapes):
-    '''
-    Overwrite the postprocessing from roiheads
-    '''
-    device = class_logits.device
-    num_classes = class_logits.shape[-1]
-
-    boxes_per_image = [boxes_in_image.shape[0] for boxes_in_image in proposals]
-    pred_boxes = self.box_coder.decode(box_regression, proposals)
-
-    pred_scores = F.softmax(class_logits, -1)
-
-    pred_boxes_list = pred_boxes.split(boxes_per_image, 0)
-    pred_scores_list = pred_scores.split(boxes_per_image, 0)
-
-    all_boxes = []
-    all_scores = []
-    all_labels = []
-    for boxes, scores, image_shape in zip(pred_boxes_list, pred_scores_list, image_shapes):
-        boxes = box_ops.clip_boxes_to_image(boxes, image_shape)
-
-        # create labels for each prediction
-        labels = torch.arange(num_classes, device=device)
-        labels = labels.view(1, -1).expand_as(scores)
-
-        # remove predictions with the background label
-        boxes = boxes[:, 1:]
-        scores = scores[:, 1:]
-        labels = labels[:, 1:]
-
-        # batch everything, by making every class prediction be a separate instance
-        boxes = boxes.reshape(-1, 4)
-        scores = scores.reshape(-1)
-        labels = labels.reshape(-1)
-
-        # remove empty boxes
-        keep = box_ops.remove_small_boxes(boxes, min_size=1e-2)
-        boxes, scores, labels = boxes[keep], scores[keep], labels[keep]
-
-        all_boxes.append(boxes)
-        all_scores.append(scores)
-        all_labels.append(labels)
-
-    return all_boxes, all_scores, all_labels
+from torchvision.models.detection.image_list import ImageList
 
 
 def get_model_instance_segmentation(num_classes):
@@ -245,7 +197,6 @@ class SegmentationModel(nn.Module):
         for i in range(ceil(len(images_tensors) / self.maskrcnn_bs)):
             batch_imgs = images_tensors[i * self.maskrcnn_bs:(i + 1) * self.maskrcnn_bs].to(self.device)
             batch_features = self.maskrcnn_model.backbone(batch_imgs)
-            batch_features.pop('pool')  # remove unnecessary pool feature
             for key, value in batch_features.items():
                 if key not in all_features:
                     all_features[key] = value.cpu()
@@ -255,6 +206,28 @@ class SegmentationModel(nn.Module):
         if self.training:
             self.maskrcnn_model.train()
         return all_features
+
+    def batch_slice_features(self, features: OrderedDict, begin, end):
+        batch_features = OrderedDict()
+        for key, value in features.items():
+            batch_features[key] = value[begin:end].to(self.device)
+
+        return batch_features
+
+    @torch.no_grad()
+    def compute_rpn_proposals(self, images, features):
+
+        self.maskrcnn_model.rpn.eval()
+        all_proposals = []
+        bs = 4
+        for i in range(ceil(len(images.tensors) / bs)):
+            batch_imgs = ImageList(images.tensors[i * bs:(i + 1) * bs].to(self.device),
+                                   images.image_sizes[i * bs:(i + 1) * bs])
+            batch_features = self.batch_slice_features(features, begin=i * bs, end=(i + 1) * bs)
+            batch_proposals, _ = self.maskrcnn_model.rpn(batch_imgs, batch_features, None)
+            all_proposals.extend(batch_proposals)
+
+        return all_proposals
 
     def _slice_features(self, features: OrderedDict, image_feature_idx, pathway_size):
         batch_features = OrderedDict()
@@ -284,7 +257,6 @@ class SegmentationModel(nn.Module):
         return image_features
 
     def forward(self, images, targets=None, optimizer=None):
-        # TODO support targets is None (no skipping)
         original_image_sizes = []
         for img in images:
             val = img.shape[-2:]
@@ -292,6 +264,10 @@ class SegmentationModel(nn.Module):
             original_image_sizes.append((val[0], val[1]))
         transformed_images, _ = self.maskrcnn_model.transform(images)
         image_features = self.compute_maskrcnn_features(transformed_images.tensors)
+        rpn_proposals = self.compute_rpn_proposals(transformed_images, image_features)
+        for elem, proposal in zip(targets, rpn_proposals):
+            elem['proposals'] = proposal.cpu()
+        del rpn_proposals
 
         '''Deal with imgs that have no objects in them'''
         valid_features_mask = []

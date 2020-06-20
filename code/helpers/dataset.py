@@ -112,7 +112,7 @@ class DAVISDataset(Dataset):
             boxes.append(img_boxes)
 
         if self.subset == 'train':
-            imgs, masks, boxes = self.apply_augmentations(imgs.copy(), masks.copy(), boxes.copy())
+            imgs, masks, boxes = self.apply_augmentations(imgs, masks, boxes)
 
         targets = []
         for i in range(len(imgs)):

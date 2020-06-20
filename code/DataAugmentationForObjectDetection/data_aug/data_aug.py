@@ -151,7 +151,6 @@ class RandomScale(object):
         img_shape = img.shape
         if len(masks) > 0:
             mask_shape = masks[0].shape
-            mask_canvas = np.zeros(mask_shape, dtype=np.uint8)
 
         resize_scale_x = 1 + self.scale_x
         resize_scale_y = 1 + self.scale_y
@@ -171,6 +170,7 @@ class RandomScale(object):
 
         canvas[:y_lim, :x_lim, :] = img[:y_lim, :x_lim, :]
         for mask_idx in range(len(masks)):
+            mask_canvas = np.zeros(mask_shape, dtype=np.uint8)
             mask_canvas[:y_lim, :x_lim, :] = masks[mask_idx][:y_lim, :x_lim, :]
             masks[mask_idx] = mask_canvas
 

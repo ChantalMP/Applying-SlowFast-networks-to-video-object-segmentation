@@ -57,12 +57,12 @@ class DAVISDataset(Dataset):
 
         for idx in range(len((imgs))):
             img, img_masks, img_gt_boxes = imgs[idx], masks[idx], gt_boxes[idx]
-            img_masks = [np.expand_dims(mask, axis=2) for mask in img_masks]
+            img_masks = [np.expand_dims(mask, axis=-1) for mask in img_masks]
             img, img_masks, img_gt_boxes = self.random_horizontal_flip(img, img_masks, np.array(img_gt_boxes).astype(np.float64))
             img, img_masks, img_gt_boxes = self.scale(img, img_masks, img_gt_boxes)
             img, img_masks, img_gt_boxes = self.rotate(img, img_masks, img_gt_boxes)
             if len(img_gt_boxes) > 0:
-                img_boxes = [list(img_gt_boxes[0, :].astype(np.int64))]
+                img_boxes = [list(img_gt_boxes[i, :].astype(np.int64)) for i in range(len(img_gt_boxes))]
             else:
                 img_boxes = []
 
@@ -111,9 +111,8 @@ class DAVISDataset(Dataset):
             masks.append(img_masks)
             boxes.append(img_boxes)
 
-        # TODO activate it
-        # if self.subset == 'train':
-        #     imgs, masks, boxes = self.apply_augmentations(imgs, masks, boxes)
+        if self.subset == 'train':
+            imgs, masks, boxes = self.apply_augmentations(imgs.copy(), masks.copy(), boxes.copy())
 
         targets = []
         for i in range(len(imgs)):
@@ -137,8 +136,8 @@ class DAVISDataset(Dataset):
             for img_idx in range(len(imgs)):
                 imgs[img_idx] = self.transforms(imgs[img_idx].copy())
 
-        # visualize_image_with_properties(imgs[0].cpu().numpy().transpose(1, 2, 0), masks=targets[0]['masks'], boxes=targets[0]['boxes'],
-        #                                proposals=targets[0]['proposals'][:10])
+        # visualize_image_with_properties(imgs[0].cpu().numpy().transpose(1, 2, 0), masks=targets[0]['masks'], boxes=targets[0]['boxes'],)
+
         return imgs, targets, seq_name
 
 

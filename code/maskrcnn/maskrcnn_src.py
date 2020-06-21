@@ -14,10 +14,12 @@ from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from engine import train_one_epoch, evaluate, predict_boxes
 import utils
 import transforms as T
+from torchvision.transforms import ToTensor
+from data_aug import data_aug
 
 
 class DavisDataset(object):
-    def __init__(self, root, transforms, year='2017'):
+    def __init__(self, root, transforms, year='2017', subset='val', augmentation=False):
         self.root = root
         self.transforms = transforms
         # load all image files, sorting them to
@@ -48,6 +50,37 @@ class DavisDataset(object):
                 self.val_indices.append(idx)
             else:
                 self.test_indices.append(idx)
+
+        self.totensor = ToTensor()
+        self.subset = subset
+        self.augmentation = augmentation
+        self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
+        self.scale = data_aug.RandomScale(scale=0.2)
+        self.rotate = data_aug.RandomRotate(angle=15)
+
+    def apply_augmentations(self, imgs, masks, gt_boxes):
+        self.rotate.reset()
+        self.scale.reset()
+        self.random_horizontal_flip.reset()
+
+        for idx in range(len((imgs))):
+            img, img_masks, img_gt_boxes = imgs[idx], masks[idx], gt_boxes[idx]
+            img_masks = [np.expand_dims(mask, axis=-1) for mask in img_masks]
+            img, img_masks, img_gt_boxes = self.random_horizontal_flip(img, img_masks, np.array(img_gt_boxes).astype(np.float64))
+            img, img_masks, img_gt_boxes = self.scale(img, img_masks, img_gt_boxes)
+            img, img_masks, img_gt_boxes = self.rotate(img, img_masks, img_gt_boxes)
+            if len(img_gt_boxes) > 0:
+                img_boxes = [list(img_gt_boxes[i, :].astype(np.int64)) for i in range(len(img_gt_boxes))]
+            else:
+                img_boxes = []
+
+            img_masks = [mask[:, :, 0].astype(np.bool) for mask in img_masks]
+
+            imgs[idx] = img
+            masks[idx] = img_masks
+            gt_boxes[idx] = img_boxes
+
+        return imgs, masks, gt_boxes
 
     def __getitem__(self, idx):
         # load images ad masks
@@ -86,6 +119,15 @@ class DavisDataset(object):
 
         num_objs = len(valid_ids)
         masks = masks[valid_ids]
+
+        if self.subset == 'train' and self.augmentation:
+            img, masks, boxes = self.apply_augmentations([np.array(img)], [masks], [boxes])
+            img = img[0]
+            masks = masks[0]
+            if len(masks) > 0:
+                masks = np.stack(masks)
+            boxes = boxes[0]
+
         if len(boxes) == 0:
             if self.transforms is not None:
                 img = T.ToTensor()(img, None)[0]
@@ -108,7 +150,9 @@ class DavisDataset(object):
         target["area"] = area
         target["iscrowd"] = iscrowd
 
-        if self.transforms is not None:
+        if self.augmentation:
+            img = self.totensor(img)
+        elif self.transforms is not None:
             img, target = self.transforms(img, target)
 
         return img, target, True, seq_name
@@ -175,7 +219,7 @@ def main(train=True, year=None, split=None):
     num_classes = 2
     # use our dataset and defined transformations
     if train:
-        dataset = DavisDataset('../data/DAVIS', get_transform(train=True))
+        dataset = DavisDataset('../data/DAVIS', get_transform(train=True), subset='train', augmentation=True)
         dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
     else:  # box computation
         dataset = DavisDataset('../data/DAVIS', get_transform(train=False))
@@ -217,7 +261,7 @@ def main(train=True, year=None, split=None):
                                                        gamma=0.1)
 
         # let's train it for 10 epochs
-        num_epochs = 10
+        num_epochs = 15
 
         for epoch in range(num_epochs):
             # train for one epoch, printing every 10 iterations
@@ -226,7 +270,7 @@ def main(train=True, year=None, split=None):
             lr_scheduler.step()
             # evaluate on the test dataset
             evaluate(model, data_loader_val, device=device)
-            torch.save(model.state_dict(), "data/maskrcnn_model.pth")
+            torch.save(model.state_dict(), "data/maskrcnn_model_augmented.pth")
 
         print("That's it!")
 
@@ -238,4 +282,4 @@ def main(train=True, year=None, split=None):
 
 
 if __name__ == "__main__":
-    main(train=False, year='2017', split='val')
+    main(train=True, year='2017', split='train')

@@ -56,8 +56,7 @@ def main():
     # TODO test writer working correctly (also for colab)
     # TODO test eval time working correctly
     # TODO test fixing working correctly
-
-    epochs = 15
+    epochs = 20
     lr = 0.001
     weight_decay = 0.0001
 

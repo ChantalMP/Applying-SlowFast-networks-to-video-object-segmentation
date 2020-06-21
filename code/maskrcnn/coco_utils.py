@@ -152,7 +152,7 @@ def convert_to_coco_api(ds, indices):
     for img_idx in indices:
         # find better way to get target
         # targets = ds.get_annotations(img_idx)
-        img, targets, valid = ds[img_idx]
+        img, targets, valid, _ = ds[img_idx]
         if valid is False:
             continue
         image_id = targets["image_id"].item()

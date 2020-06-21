@@ -123,6 +123,7 @@ class DAVISSequenceDataset(Dataset):
         # zero padding in front
         padding_count = self.fast_pathway_size // 2
         imgs = torch.cat([torch.zeros_like(imgs[0].repeat(padding_count, 1, 1, 1)), torch.stack(imgs)])
+        imgs = [elem for elem in imgs]
 
         return imgs, target
 

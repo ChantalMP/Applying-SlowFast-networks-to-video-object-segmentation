@@ -38,18 +38,20 @@ class RandomHorizontalFlip(object):
     def reset(self):
         self.p_thresh = random.random()
 
-    def __call__(self, img, masks, bboxes):
+    def __call__(self, img, masks=None, bboxes=None):
         img_center = np.array(img.shape[:2])[::-1] / 2
         img_center = np.hstack((img_center, img_center))
         if self.p_thresh < self.p:
             img = img[:, ::-1, :]
-            for mask_idx in range(len(masks)):
-                masks[mask_idx] = masks[mask_idx][:, ::-1, :]
-            if len(bboxes) > 0:
-                bboxes[:, [0, 2]] += 2 * (img_center[[0, 2]] - bboxes[:, [0, 2]])
-                box_w = abs(bboxes[:, 0] - bboxes[:, 2])
-                bboxes[:, 0] -= box_w
-                bboxes[:, 2] += box_w
+            if masks is not None:
+                for mask_idx in range(len(masks)):
+                    masks[mask_idx] = masks[mask_idx][:, ::-1, :]
+            if bboxes is not None:
+                if len(bboxes) > 0:
+                    bboxes[:, [0, 2]] += 2 * (img_center[[0, 2]] - bboxes[:, [0, 2]])
+                    box_w = abs(bboxes[:, 0] - bboxes[:, 2])
+                    bboxes[:, 0] -= box_w
+                    bboxes[:, 2] += box_w
 
         return img, masks, bboxes
 
@@ -144,23 +146,26 @@ class RandomScale(object):
             self.scale_x = random.uniform(*self.scale)
             self.scale_y = self.scale_x
 
-    def __call__(self, img, masks, bboxes):
+    def __call__(self, img, masks=None, bboxes=None):
 
         # Chose a random digit to scale by
 
         img_shape = img.shape
-        if len(masks) > 0:
-            mask_shape = masks[0].shape
+        if masks is not None:
+            if len(masks) > 0:
+                mask_shape = masks[0].shape
 
         resize_scale_x = 1 + self.scale_x
         resize_scale_y = 1 + self.scale_y
 
         img = cv2.resize(img, None, fx=resize_scale_x, fy=resize_scale_y)
-        for mask_idx in range(len(masks)):
-            mask = masks[mask_idx].astype(np.uint8)
-            masks[mask_idx] = np.expand_dims(cv2.resize(mask, None, fx=resize_scale_x, fy=resize_scale_y), axis=2)
 
-        if len(bboxes) > 0:
+        if masks is not None:
+            for mask_idx in range(len(masks)):
+                mask = masks[mask_idx].astype(np.uint8)
+                masks[mask_idx] = np.expand_dims(cv2.resize(mask, None, fx=resize_scale_x, fy=resize_scale_y), axis=2)
+
+        if bboxes is not None and len(bboxes) > 0:
             bboxes[:, :4] *= [resize_scale_x, resize_scale_y, resize_scale_x, resize_scale_y]
 
         canvas = np.zeros(img_shape, dtype=np.uint8)
@@ -169,13 +174,15 @@ class RandomScale(object):
         x_lim = int(min(resize_scale_x, 1) * img_shape[1])
 
         canvas[:y_lim, :x_lim, :] = img[:y_lim, :x_lim, :]
-        for mask_idx in range(len(masks)):
-            mask_canvas = np.zeros(mask_shape, dtype=np.uint8)
-            mask_canvas[:y_lim, :x_lim, :] = masks[mask_idx][:y_lim, :x_lim, :]
-            masks[mask_idx] = mask_canvas
-
         img = canvas
-        if len(bboxes) > 0:
+
+        if masks is not None:
+            for mask_idx in range(len(masks)):
+                mask_canvas = np.zeros(mask_shape, dtype=np.uint8)
+                mask_canvas[:y_lim, :x_lim, :] = masks[mask_idx][:y_lim, :x_lim, :]
+                masks[mask_idx] = mask_canvas
+
+        if bboxes is not None and len(bboxes) > 0:
             bboxes = clip_box(bboxes, [0, 0, 1 + img_shape[1], img_shape[0]], 0.05)
 
         return img, masks, bboxes
@@ -424,16 +431,18 @@ class RandomRotate(object):
     def reset(self):
         self.chosen_angle = random.uniform(*self.angle)
 
-    def __call__(self, img, masks, bboxes):
+    def __call__(self, img, masks=None, bboxes=None):
 
         w, h = img.shape[1], img.shape[0]
         cx, cy = w // 2, h // 2
 
         img = rotate_im(img, self.chosen_angle)
-        for mask_idx in range(len(masks)):
-            masks[mask_idx] = np.expand_dims(rotate_im(masks[mask_idx], self.chosen_angle), axis=2)
 
-        if len(bboxes) > 0:
+        if masks is not None:
+            for mask_idx in range(len(masks)):
+                masks[mask_idx] = np.expand_dims(rotate_im(masks[mask_idx], self.chosen_angle), axis=2)
+
+        if bboxes is not None and len(bboxes) > 0:
             corners = get_corners(bboxes)
             corners = np.hstack((corners, bboxes[:, 4:]))
             corners[:, :8] = rotate_box(corners[:, :8], self.chosen_angle, cx, cy, h, w)
@@ -444,10 +453,12 @@ class RandomRotate(object):
         scale_factor_y = img.shape[0] / h
 
         img = cv2.resize(img, (w, h))
-        for mask_idx in range(len(masks)):
-            masks[mask_idx] = np.expand_dims(cv2.resize(masks[mask_idx], (w, h)), axis=2)
 
-        if len(bboxes) > 0:
+        if masks is not None:
+            for mask_idx in range(len(masks)):
+                masks[mask_idx] = np.expand_dims(cv2.resize(masks[mask_idx], (w, h)), axis=2)
+
+        if bboxes is not None and len(bboxes) > 0:
             new_bbox[:, :4] /= [scale_factor_x, scale_factor_y, scale_factor_x, scale_factor_y]
             bboxes = new_bbox
             bboxes = clip_box(bboxes, [0, 0, w, h], 0.05)

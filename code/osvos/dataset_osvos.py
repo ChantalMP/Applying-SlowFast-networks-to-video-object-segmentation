@@ -6,21 +6,22 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 import torch
-from DataAugmentationForObjectDetection.data_aug import bbox_util, data_aug
-from copy import deepcopy
+from DataAugmentationForObjectDetection.data_aug import data_aug
+from math import ceil
+from torchvision.transforms import Compose, ToTensor
+
 
 
 class DAVISSequenceDataset(Dataset):
-    def __init__(self, root, sequence_name, resolution='480p', year='2016'):
+    def __init__(self, root, sequence_name, fast_pathway_size, transforms=None, resolution='480p'):
         self.root = root
         self.sequence_name = sequence_name
+        self.fast_pathway_size = fast_pathway_size
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
         self.mask_path = os.path.join(self.root, 'Annotations', resolution)
-        self.imagesets_path = os.path.join(self.root, 'ImageSets', year) if year == '2017' else os.path.join(self.root,
-                                                                                                             'ImageSets',
-                                                                                                             resolution)
-        loading_str = f'predicted_proposals_val_{year}.pt'  # only use validation data for osvos anyway
-        self.box_proposals = torch.load(f'maskrcnn/{loading_str}')[self.sequence_name]
+        self.imagesets_path = os.path.join(self.root, 'ImageSets', resolution)
+
+        self.transforms = transforms
 
         self.sequence_info = {}
         images = np.sort(glob(os.path.join(self.img_path, sequence_name, '*.jpg'))).tolist()
@@ -30,18 +31,57 @@ class DAVISSequenceDataset(Dataset):
         self.sequence_info['name'] = sequence_name
 
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        self.scale = data_aug.RandomScale(scale=(.75, 1.25))
-        self.rotate = data_aug.RandomRotate(angle=30)
+        self.scale = data_aug.RandomScale(scale=(0.5))
+        self.rotate = data_aug.RandomRotate(angle=15)
 
     def __len__(self):
         return 1
 
+    def apply_augmentations(self, img, img_masks=None, img_gt_boxes=None):
+        '''
+        :param img: imgs if only for neigbours else one image only and masks and boxes exist
+        '''
+
+        self.rotate.reset()
+        self.scale.reset()
+        self.random_horizontal_flip.reset()
+
+        if img_masks is None or img_gt_boxes is None:
+            for idx in range(len(img)):
+                current_img = img[idx]
+                current_img = self.random_horizontal_flip(current_img)
+                current_img = self.scale(current_img)
+                current_img = self.rotate(current_img)
+                img[idx] = current_img
+            return img, None, None
+
+        img_masks = [np.expand_dims(mask, axis=-1) for mask in img_masks]
+        img, img_masks, img_gt_boxes = self.random_horizontal_flip(img, img_masks, np.array(img_gt_boxes).astype(np.float64))
+        img, img_masks, img_gt_boxes = self.scale(img, img_masks, img_gt_boxes)
+        while len(img_gt_boxes) == 0:
+            self.scale.reset()
+            img, img_masks, img_gt_boxes = self.scale(img, img_masks, img_gt_boxes)
+        img, img_masks, img_gt_boxes = self.rotate(img, img_masks, img_gt_boxes)
+
+        img_masks = [mask[:, :, 0].astype(np.bool) for mask in img_masks]
+
+        return img, img_masks, img_gt_boxes
+
     # returns the first image of the sequence
     def __getitem__(self, idx):
-        image = self.sequence_info['images'][0]  # or which frame we want to use for finetuning
-        image = Image.open(image)
-        image = np.array(image)
-        mask = self.sequence_info['masks'][0]
+
+        image_paths = self.sequence_info['images'][0:ceil(self.fast_pathway_size / 2)]  # get first frame and neigbors
+        mask_paths = self.sequence_info['masks'][0:ceil(self.fast_pathway_size / 2)]
+
+        imgs = []
+
+        for img in image_paths:
+            image = Image.open(img)
+            image = np.array(image)
+            imgs.append(image)
+
+        middle_image = imgs[0]
+        mask = mask_paths[0]
         mask = Image.open(mask)
         mask = np.array(mask)
 
@@ -64,20 +104,8 @@ class DAVISSequenceDataset(Dataset):
             img_masks.append(binary_masks[0])
 
         # transform img, mask and box
-        img, mask, box = self.random_horizontal_flip(image, np.expand_dims(img_masks[0], axis=2),
-                                                     np.array(img_boxes).astype(np.float64))
-
-        assert len(box) > 0
-        scaled_img, scaled_mask, scaled_box = self.scale(deepcopy(img), deepcopy(mask.astype(np.uint8)), deepcopy(box))
-        while len(scaled_box) == 0:
-            scaled_img, scaled_mask, scaled_box = self.scale(deepcopy(img), deepcopy(mask.astype(np.uint8)),
-                                                             deepcopy(box))
-        img, mask, box = scaled_img, scaled_mask, scaled_box
-
-        img, mask, box = self.rotate(img, mask, box)
-        img_masks = [mask[:, :, 0]]
-        img_boxes = [list(box[0, :].astype(np.int64))]
-
+        assert len(img_boxes) > 0
+        middle_image, img_masks, img_boxes = self.apply_augmentations(middle_image, img_masks, img_boxes)
 
         target = {}
         bxs = torch.as_tensor(img_boxes, dtype=torch.float32)
@@ -87,14 +115,18 @@ class DAVISSequenceDataset(Dataset):
         target["image_id"] = torch.tensor([idx])  # unique if no seq is longer than 1000 frames
         target["area"] = (bxs[:, 3] - bxs[:, 1]) * (bxs[:, 2] - bxs[:, 0])
         target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
-        target["proposals"] = self.box_proposals.cpu()
 
-        # TODO apply transforms to image, mask and box and proposals
-        # TODO get previous and following frames
-        # TODO visualize augmentations
-        # TODO adapt methods to also augment proposals and neighbouring frames
+        # augment neighboring frames
+        imgs = self.apply_augmentations(imgs)
+        if self.transforms:
+            for img_idx in range(len(imgs)):
+                imgs[img_idx] = self.transforms(imgs[img_idx].copy())
 
-        return image, target
+        # zero padding in front
+        padding_count = self.fast_pathway_size // 2
+        imgs = torch.cat([torch.zeros_like(imgs[:1, :, :, :].repeat(padding_count, 1, 1, 1)), imgs])
+
+        return imgs, target
 
 
 if __name__ == '__main__':
@@ -105,6 +137,6 @@ if __name__ == '__main__':
     composed_transforms = transforms.Compose([tr.RandomHorizontalFlip(),
                                               tr.ScaleNRotate(rots=(-30, 30), scales=(.75, 1.25)),
                                               tr.ToTensor()])
-    ds = DAVISSequenceDataset(root='data/DAVIS_2016', sequence_name='camel')
+    ds = DAVISSequenceDataset(root='data/DAVIS_2016', sequence_name='camel', fast_pathway_size=7, transforms=Compose([ToTensor()]))
 
     img, target = ds[0]

@@ -149,7 +149,6 @@ class RandomScale(object):
     def __call__(self, img, masks=None, bboxes=None):
 
         # Chose a random digit to scale by
-
         img_shape = img.shape
         if masks is not None:
             if len(masks) > 0:

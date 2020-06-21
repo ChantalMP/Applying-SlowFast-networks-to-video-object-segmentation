@@ -11,7 +11,6 @@ from math import ceil
 from torchvision.transforms import Compose, ToTensor
 
 
-
 class DAVISSequenceDataset(Dataset):
     def __init__(self, root, sequence_name, fast_pathway_size, transforms=None, resolution='480p'):
         self.root = root
@@ -49,9 +48,9 @@ class DAVISSequenceDataset(Dataset):
         if img_masks is None or img_gt_boxes is None:
             for idx in range(len(img)):
                 current_img = img[idx]
-                current_img = self.random_horizontal_flip(current_img)
-                current_img = self.scale(current_img)
-                current_img = self.rotate(current_img)
+                current_img, _, _ = self.random_horizontal_flip(current_img)
+                current_img, _, _ = self.scale(current_img)
+                current_img, _, _ = self.rotate(current_img)
                 img[idx] = current_img
             return img, None, None
 
@@ -117,14 +116,14 @@ class DAVISSequenceDataset(Dataset):
         target["iscrowd"] = torch.zeros((len(bxs),), dtype=torch.int64)
 
         # augment neighboring frames
-        imgs = self.apply_augmentations(imgs)
+        imgs, _, _ = self.apply_augmentations(imgs)
         if self.transforms:
             for img_idx in range(len(imgs)):
                 imgs[img_idx] = self.transforms(imgs[img_idx].copy())
 
         # zero padding in front
         padding_count = self.fast_pathway_size // 2
-        imgs = torch.cat([torch.zeros_like(imgs[:1, :, :, :].repeat(padding_count, 1, 1, 1)), imgs])
+        imgs = torch.cat([imgs[0].repeat(padding_count, 1, 1, 1), imgs])
 
         return imgs, target
 

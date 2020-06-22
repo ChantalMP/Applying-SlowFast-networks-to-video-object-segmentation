@@ -34,16 +34,12 @@ class DAVISSequenceDataset(Dataset):
         self.rotate = data_aug.RandomRotate(angle=15)
 
     def __len__(self):
-        return 1
+        return 100
 
     def apply_augmentations(self, img, img_masks=None, img_gt_boxes=None):
         '''
         :param img: imgs if only for neigbours else one image only and masks and boxes exist
         '''
-
-        self.rotate.reset()
-        self.scale.reset()
-        self.random_horizontal_flip.reset()
 
         if img_masks is None or img_gt_boxes is None:
             for idx in range(len(img)):
@@ -69,8 +65,12 @@ class DAVISSequenceDataset(Dataset):
     # returns the first image of the sequence
     def __getitem__(self, idx):
 
+        self.rotate.reset()
+        self.scale.reset()
+        self.random_horizontal_flip.reset()
+
         image_paths = self.sequence_info['images'][0:ceil(self.fast_pathway_size / 2)]  # get first frame and neigbors
-        mask_paths = self.sequence_info['masks'][0:ceil(self.fast_pathway_size / 2)]
+        mask_path = self.sequence_info['masks'][0]
 
         imgs = []
 
@@ -80,8 +80,7 @@ class DAVISSequenceDataset(Dataset):
             imgs.append(image)
 
         middle_image = imgs[0]
-        mask = mask_paths[0]
-        mask = Image.open(mask)
+        mask = Image.open(mask_path)
         mask = np.array(mask)
 
         # get ids of the different objects in the img
@@ -123,7 +122,8 @@ class DAVISSequenceDataset(Dataset):
 
         # zero padding in front
         padding_count = self.fast_pathway_size // 2
-        imgs = torch.cat([imgs[0].repeat(padding_count, 1, 1, 1), imgs])
+        imgs = torch.cat([torch.zeros_like(imgs[0].repeat(padding_count, 1, 1, 1)), torch.stack(imgs)])
+        imgs = [elem for elem in imgs]
 
         return imgs, target
 
@@ -132,10 +132,6 @@ if __name__ == '__main__':
     from torchvision import transforms
     from osvos import osvos_transforms as tr
 
-    # Transforms from OSVOS paper:
-    composed_transforms = transforms.Compose([tr.RandomHorizontalFlip(),
-                                              tr.ScaleNRotate(rots=(-30, 30), scales=(.75, 1.25)),
-                                              tr.ToTensor()])
     ds = DAVISSequenceDataset(root='data/DAVIS_2016', sequence_name='camel', fast_pathway_size=7, transforms=Compose([ToTensor()]))
 
     img, target = ds[0]

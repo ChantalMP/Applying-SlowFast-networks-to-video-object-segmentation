@@ -55,8 +55,8 @@ class DavisDataset(object):
         self.subset = subset
         self.augmentation = augmentation
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        self.scale = data_aug.RandomScale(scale=0.2)
-        self.rotate = data_aug.RandomRotate(angle=15)
+        self.scale = data_aug.RandomScale(scale=0.15)
+        self.rotate = data_aug.RandomRotate(angle=10)
 
     def apply_augmentations(self, imgs, masks, gt_boxes):
         self.rotate.reset()
@@ -253,7 +253,7 @@ def main(train=True, year=None, split=None):
     if train:
         # construct an optimizer
         params = [p for p in model.parameters() if p.requires_grad]
-        optimizer = torch.optim.SGD(params, lr=0.005,
+        optimizer = torch.optim.SGD(params, lr=0.001,
                                     momentum=0.9, weight_decay=0.0005)
         # and a learning rate scheduler
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer,

@@ -69,4 +69,7 @@ def davis_evaluation(model, seq_name=None):
     total_time = time() - time_start
     print('\nTotal time:' + str(total_time))
 
-    return table_g['J&F-Mean'][0], total_time
+    if seq_name is None:
+        return table_g['J&F-Mean'][0], total_time
+    else:
+        return table_g['J&F-Mean'][0], table_seq['J-Mean'][0], table_seq['F-Mean'][0], total_time

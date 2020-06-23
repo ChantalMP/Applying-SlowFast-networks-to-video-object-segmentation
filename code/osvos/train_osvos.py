@@ -27,16 +27,16 @@ def evaluate_model(model, device, sequence_name):
     full_model.load_state_dict(model.state_dict())
     full_model.to(device)
     model.to(torch.device('cpu'))
-    davis_evaluation(full_model, seq_name=sequence_name)
+    jf_mean, j_mean, f_mean, total_time = davis_evaluation(full_model, seq_name=sequence_name)
     model.to(device)
     del full_model
+    return jf_mean, j_mean, f_mean, total_time
 
 
-def main():
-    epochs = 20
+def main(sequence_name):
+    epochs = 10
     lr = 0.001
     weight_decay = 0.0001
-    sequence_name = 'bmx-trees'
 
     transforms = Compose([ToTensor()])
     dataset = DAVISSequenceDataset(root='data/DAVIS_2016', transforms=transforms, sequence_name=sequence_name, fast_pathway_size=fast_pathway_size)
@@ -56,8 +56,10 @@ def main():
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
 
     global_step = 0
-    best_iou = -1
-    # TODO early stopping
+    best_jf_mean = -1
+    best_j_mean = -1
+    best_f_mean = -1
+    best_total_time = -1
 
     # First do an evaluation to check everything works
     evaluate_model(model=model, device=device, sequence_name=sequence_name)
@@ -73,12 +75,20 @@ def main():
 
         print(f'\nLoss: {total_loss:.4f}\n')
 
-        if epoch % 2 == 0 and epoch != 0:
-            evaluate_model(model=model, device=device, sequence_name=sequence_name)
+        jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
+
+        if jf_mean > best_jf_mean:
+            best_jf_mean = jf_mean
+            best_f_mean = f_mean
+            best_j_mean = j_mean
+            best_total_time = total_time
+            print(f'Saving model with JF-Mean: {jf_mean}')
+            save_path = best_model_path.parent / f'{best_model_path.name.replace(".pth", "")}_osvos_{sequence_name}.pth'
+            torch.save(model.state_dict(), save_path)
 
     print("Finished Training.")
-    evaluate_model(model=model, device=device, sequence_name=sequence_name)
+    return best_f_mean, best_j_mean, best_total_time
 
 
 if __name__ == '__main__':
-    main()
+    main(sequence_name='bmx-trees')

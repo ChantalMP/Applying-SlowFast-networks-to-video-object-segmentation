@@ -34,7 +34,7 @@ class DAVISSequenceDataset(Dataset):
         self.rotate = data_aug.RandomRotate(angle=15)
 
     def __len__(self):
-        return 100
+        return 200
 
     def apply_augmentations(self, img, img_masks=None, img_gt_boxes=None):
         '''

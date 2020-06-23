@@ -82,7 +82,7 @@ class OsvosSegmentationModel(SegmentationModel):
 
             losses = sum(loss for loss in losses.values())
             total_loss += losses.item()
-            losses.backward()  # TODO more rarely backward
+            losses.backward()
             self.accumulator += 1
             if self.accumulator == 4:
                 optimizer.step()

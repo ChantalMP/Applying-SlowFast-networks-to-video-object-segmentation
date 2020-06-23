@@ -19,7 +19,7 @@ from helpers.utils import visualize_image_with_properties
 
 
 class DAVISDataset(Dataset):
-    def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017'):
+    def __init__(self, root, subset='train', resolution='480p', transforms=None, year='2017', sequences='all'):
         self.root = root
         self.subset = subset
         self.img_path = os.path.join(self.root, 'JPEGImages', resolution)
@@ -29,10 +29,13 @@ class DAVISDataset(Dataset):
                                                                                                              resolution)
         self.transforms = transforms
 
-        with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
-            tmp = f.readlines()
-        sequences_names = [x.strip() for x in tmp] if year == '2017' else sorted(
-            {x.split()[0].split('/')[-2] for x in tmp})
+        if sequences == 'all':
+            with open(os.path.join(self.imagesets_path, f'{self.subset}.txt'), 'r') as f:
+                tmp = f.readlines()
+            sequences_names = [x.strip() for x in tmp] if year == '2017' else sorted(
+                {x.split()[0].split('/')[-2] for x in tmp})
+        else:
+            sequences_names = sequences if isinstance(sequences, list) else [sequences]
         self.sequences = []
         for seq in sequences_names:
             info = {}

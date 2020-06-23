@@ -13,17 +13,18 @@ import pandas as pd
 from time import time
 
 
-def davis_evaluation(model):
+def davis_evaluation(model, seq_name=None):
     transforms = Compose([ToTensor()])
-    dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016')
+    sequences = 'all' if seq_name is None else seq_name
+    dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016', sequences=sequences)
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
     time_start = time()
+    task_type = 'unsupervised' if seq_name is None else 'semi-supervised'
 
     for seq_idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Calculating Segmentations"):
-
         imgs, targets, seq_name = seq
-        seq_output_path = Path(f'davis2017_evaluation/results/unsupervised/{model_name}/{seq_name}')
+        seq_output_path = Path(f'davis2017_evaluation/results/{task_type}/{model_name}/{seq_name}')
         seq_output_path.mkdir(parents=True, exist_ok=True)
         with torch.no_grad():
             _, detections = model(imgs, deepcopy(targets))
@@ -40,8 +41,9 @@ def davis_evaluation(model):
 
     print(f'Evaluating sequences...')
     # Create dataset and evaluate
-    dataset_eval = DAVISEvaluation(davis_root='data/DAVIS_2016', task='unsupervised', gt_set='val', year='2016')
-    metrics_res = dataset_eval.evaluate(f'davis2017_evaluation/results/unsupervised/{model_name}')
+    # TODO task semi-supervised
+    dataset_eval = DAVISEvaluation(davis_root='data/DAVIS_2016', task='unsupervised', gt_set='val', year='2016', sequences=sequences)
+    metrics_res = dataset_eval.evaluate(f'davis2017_evaluation/results/{task_type}/{model_name}')
     J, F = metrics_res['J'], metrics_res['F']
 
     # Generate dataframe for the general results

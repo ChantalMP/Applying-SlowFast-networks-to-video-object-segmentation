@@ -361,4 +361,6 @@ class SegmentationModel(nn.Module):
                 else:
                     full_detections.append({})
 
+            all_detections = full_detections
+
         return (total_loss, all_detections)

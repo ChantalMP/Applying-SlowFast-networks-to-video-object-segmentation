@@ -1,24 +1,9 @@
-from torchvision import transforms
-
-# Transforms from OSVOS paper:
-# composed_transforms = transforms.Compose([tr.RandomHorizontalFlip(),
-#                                           tr.ScaleNRotate(rots=(-30, 30), scales=(.75, 1.25)),
-#                                           tr.ToTensor()])
-
-# TODO finish dataset (integrate transforms)
-# TODO write training loop using dataloader (maybe adapt dataset loading mechanics here)
-# TODO Test augmentations on masks and boxes
-# TODO load our pretrained network
-# TODO evaluation: predict on all other images of sequence
-# TODO build whole pipeline that evaluates osvos on all sequences (train + validate)
-# TODO new model.py code
-
-
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, random_seed
+from helpers.constants import best_model_path, slow_pathway_size, fast_pathway_size, random_seed
 import random
 import torch
 import numpy as np
 import os
+from helpers.davis_evaluate import davis_evaluation
 
 # As deterministic as possible
 random.seed(random_seed)
@@ -32,35 +17,29 @@ torch.backends.cudnn.benchmark = False
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
-from torch.utils.tensorboard import SummaryWriter
 from osvos.dataset_osvos import DAVISSequenceDataset
 from osvos.osvos_model import OsvosSegmentationModel
+from helpers.model import SegmentationModel
 
 
-# from helpers.dataset import DAVISDataset
-# from helpers.model import SegmentationModel
-# from helpers.davis_evaluate import davis_evaluation
+def evaluate_model(model, device, sequence_name):
+    full_model = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size, fast_pathway_size=fast_pathway_size)
+    full_model.load_state_dict(model.state_dict())
+    full_model.to(device)
+    model.to(torch.device('cpu'))
+    jf_mean, j_mean, f_mean, total_time = davis_evaluation(full_model, seq_name=sequence_name)
+    model.to(device)
+    del full_model
+    return jf_mean, j_mean, f_mean, total_time
 
 
-def main():
-    '''
-    Train till convergence:
-    1. Without temporal context
-    2. With but slow fast same size (as big as it fits)
-    3. Smaller slow but bigger fast
-    '''
-    # TODO test gpu usage
-    # TODO start with our trained network and finetune it for osvos
-    # TODO test writer working correctly (also for colab)
-    # TODO test eval time working correctly
-    # TODO test fixing working correctly
-    # TODO maskrcnn augmentation
-    epochs = 20
+def main(sequence_name):
+    epochs = 10
     lr = 0.001
     weight_decay = 0.0001
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISSequenceDataset(root='data/DAVIS_2016', transforms=transforms, sequence_name='bmx-bumps', fast_pathway_size=fast_pathway_size)
+    dataset = DAVISSequenceDataset(root='data/DAVIS_2016', transforms=transforms, sequence_name=sequence_name, fast_pathway_size=fast_pathway_size)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: OsvosSegmentationModel = OsvosSegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
@@ -73,42 +52,43 @@ def main():
     print(f'{total_params:,} total parameters.')
     total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f'{total_trainable_params:,} training parameters.')
-    total_steps = epochs * len(dataloader)
 
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
 
-    # writer: SummaryWriter = SummaryWriter(writer_dir)
     global_step = 0
-    best_iou = -1
+    best_jf_mean = -1
+    best_j_mean = -1
+    best_f_mean = -1
+    best_total_time = -1
 
     # First do an evaluation to check everything works
-    # davis_evaluation(model)
+    evaluate_model(model=model, device=device, sequence_name=sequence_name)
     for epoch in tqdm(range(0, epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
-        for idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Sequences"):
+        for idx, seq in enumerate(dataloader):
             model.train()
             imgs, target = seq
             batch_loss, _ = model(imgs, target, optimizer=opt)  # Backward happens inside
-            # writer.add_scalar('Batch Loss/Train', batch_loss, global_step=global_step)
             total_loss += batch_loss
 
             global_step += 1
 
         print(f'\nLoss: {total_loss:.4f}\n')
-        # writer.add_scalar('Loss/Train', total_loss, global_step=global_step)
-        # val_iou, eval_time = davis_evaluation(model)
-        # writer.add_scalar('Eval Time', eval_time, global_step=global_step)
-        # if val_iou > best_iou:
-        #     best_iou = val_iou
-        #     print(f'Saving model with iou: {val_iou}')
-        #     torch.save(model.state_dict(), best_model_path)
-        #
-        # torch.save(model.state_dict(), model_path)
-        # torch.save({
-        #     'epoch': epoch,
-        #     'optimizer_state_dict': opt.state_dict()
-        # }, checkpoint_path)
+
+        jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
+
+        if jf_mean > best_jf_mean:
+            best_jf_mean = jf_mean
+            best_f_mean = f_mean
+            best_j_mean = j_mean
+            best_total_time = total_time
+            print(f'Saving model with JF-Mean: {jf_mean}')
+            save_path = best_model_path.parent / f'{best_model_path.name.replace(".pth", "")}_osvos_{sequence_name}.pth'
+            torch.save(model.state_dict(), save_path)
+
+    print("Finished Training.")
+    return best_f_mean, best_j_mean, best_total_time
 
 
 if __name__ == '__main__':
-    main()
+    main(sequence_name='bmx-trees')

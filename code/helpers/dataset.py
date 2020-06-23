@@ -44,8 +44,8 @@ class DAVISDataset(Dataset):
             self.sequences.append(info)
 
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        self.scale = data_aug.RandomScale(scale=0.15)
-        self.rotate = data_aug.RandomRotate(angle=10)
+        self.scale = data_aug.RandomScale(scale=0.05)
+        self.rotate = data_aug.RandomRotate(angle=5)
 
     def __len__(self):
         return len(self.sequences)

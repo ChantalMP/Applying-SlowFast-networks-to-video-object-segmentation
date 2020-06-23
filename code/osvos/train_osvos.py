@@ -62,7 +62,7 @@ def main(sequence_name):
     best_total_time = -1
 
     # First do an evaluation to check everything works
-    evaluate_model(model=model, device=device, sequence_name=sequence_name)
+    beginning_jf_mean, _, _, _ = evaluate_model(model=model, device=device, sequence_name=sequence_name)
     for epoch in tqdm(range(0, epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         for idx, seq in enumerate(dataloader):
@@ -87,7 +87,7 @@ def main(sequence_name):
             torch.save(model.state_dict(), save_path)
 
     print("Finished Training.")
-    return best_f_mean, best_j_mean, best_total_time
+    return best_f_mean, best_j_mean, best_total_time, beginning_jf_mean
 
 
 if __name__ == '__main__':

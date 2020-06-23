@@ -120,7 +120,7 @@ class DavisDataset(object):
         num_objs = len(valid_ids)
         masks = masks[valid_ids]
 
-        if self.subset == 'train' and self.augmentation:
+        if self.subset == 'train' and self.augmentation:  # We are using a version without augmentations for now
             img, masks, boxes = self.apply_augmentations([np.array(img)], [masks], [boxes])
             img = img[0]
             masks = masks[0]
@@ -219,7 +219,7 @@ def main(train=True, year=None, split=None):
     num_classes = 2
     # use our dataset and defined transformations
     if train:
-        dataset = DavisDataset('../data/DAVIS', get_transform(train=True), subset='train', augmentation=True)
+        dataset = DavisDataset('../data/DAVIS', get_transform(train=True), subset='train', augmentation=False)
         dataset_val = DavisDataset('../data/DAVIS', get_transform(train=False))
     else:  # box computation
         dataset = DavisDataset('../data/DAVIS', get_transform(train=False))

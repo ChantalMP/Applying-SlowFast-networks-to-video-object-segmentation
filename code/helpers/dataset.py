@@ -46,14 +46,15 @@ class DAVISDataset(Dataset):
             info['name'] = seq
             self.sequences.append(info)
 
-        self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        self.scale = data_aug.RandomScale(scale=0.05)
-        self.rotate = data_aug.RandomRotate(angle=5)
+        # self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
+        # self.scale = data_aug.RandomScale(scale=0.05)
+        # self.rotate = data_aug.RandomRotate(angle=5)
 
     def __len__(self):
         return len(self.sequences)
 
     def apply_augmentations(self, imgs, masks, gt_boxes):
+        raise NotImplementedError
         self.rotate.reset()
         self.scale.reset()
         self.random_horizontal_flip.reset()
@@ -113,9 +114,9 @@ class DAVISDataset(Dataset):
 
             masks.append(img_masks)
             boxes.append(img_boxes)
-
-        if self.subset == 'train':
-            imgs, masks, boxes = self.apply_augmentations(imgs, masks, boxes)
+        #
+        # if self.subset == 'train':
+        #     imgs, masks, boxes = self.apply_augmentations(imgs, masks, boxes)
 
         targets = []
         for i in range(len(imgs)):

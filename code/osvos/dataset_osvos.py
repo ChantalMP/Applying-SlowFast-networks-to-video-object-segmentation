@@ -2,6 +2,7 @@ import os
 from glob import glob
 import numpy as np
 from PIL import Image
+from copy import deepcopy
 
 from torch.utils.data import Dataset
 
@@ -52,10 +53,11 @@ class DAVISSequenceDataset(Dataset):
 
         img_masks = [np.expand_dims(mask, axis=-1) for mask in img_masks]
         img, img_masks, img_gt_boxes = self.random_horizontal_flip(img, img_masks, np.array(img_gt_boxes).astype(np.float64))
-        img, img_masks, img_gt_boxes = self.scale(img, img_masks, img_gt_boxes)
-        while len(img_gt_boxes) == 0:
+        img_tmp, img_masks_tmp, img_gt_boxes_tmp = self.scale(deepcopy(img), deepcopy(img_masks), deepcopy(img_gt_boxes))
+        while len(img_gt_boxes_tmp) == 0:
             self.scale.reset()
-            img, img_masks, img_gt_boxes = self.scale(img, img_masks, img_gt_boxes)
+            img_tmp, img_masks_tmp, img_gt_boxes_tmp = self.scale(deepcopy(img), deepcopy(img_masks), deepcopy(img_gt_boxes))
+        img, img_masks, img_gt_boxes = img_tmp, img_masks_tmp, img_gt_boxes_tmp
         img, img_masks, img_gt_boxes = self.rotate(img, img_masks, img_gt_boxes)
 
         img_masks = [mask[:, :, 0].astype(np.bool) for mask in img_masks]

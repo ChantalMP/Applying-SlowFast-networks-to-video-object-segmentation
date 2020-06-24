@@ -27,7 +27,7 @@ def evaluate_model(model, device, sequence_name):
     full_model.load_state_dict(model.state_dict())
     full_model.to(device)
     model.to(torch.device('cpu'))
-    jf_mean, j_mean, f_mean, total_time = davis_evaluation(full_model, seq_name=sequence_name)
+    jf_mean, j_mean, f_mean, total_time = davis_evaluation(full_model, seq_name_to_process=sequence_name)
     model.to(device)
     del full_model
     return jf_mean, j_mean, f_mean, total_time

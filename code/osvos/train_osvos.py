@@ -4,6 +4,7 @@ import torch
 import numpy as np
 import os
 from helpers.davis_evaluate import davis_evaluation
+from collections import defaultdict
 
 # As deterministic as possible
 random.seed(random_seed)
@@ -34,7 +35,7 @@ def evaluate_model(model, device, sequence_name):
 
 
 def main(sequence_name):
-    epochs = 10
+    epochs = 3
     lr = 0.001
     weight_decay = 0.0001
 
@@ -60,9 +61,11 @@ def main(sequence_name):
     best_j_mean = -1
     best_f_mean = -1
     best_total_time = -1
+    all_results = defaultdict(dict)
 
     # First do an evaluation to check everything works
-    beginning_jf_mean, _, _, _ = evaluate_model(model=model, device=device, sequence_name=sequence_name)
+    beginning_jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
+    all_results[-1] = {'jfmean': beginning_jf_mean, 'jmean': j_mean, 'fmean': f_mean, 'eval_time': total_time}
     for epoch in tqdm(range(0, epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         for idx, seq in enumerate(dataloader):
@@ -76,6 +79,7 @@ def main(sequence_name):
         print(f'\nLoss: {total_loss:.4f}\n')
 
         jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
+        all_results[epoch] = {'jfmean': jf_mean, 'jmean': j_mean, 'fmean': f_mean, 'eval_time': total_time}
 
         if jf_mean > best_jf_mean:
             best_jf_mean = jf_mean
@@ -87,7 +91,7 @@ def main(sequence_name):
             torch.save(model.state_dict(), save_path)
 
     print("Finished Training.")
-    return best_f_mean, best_j_mean, best_total_time, beginning_jf_mean
+    return best_f_mean, best_j_mean, best_total_time, beginning_jf_mean, all_results
 
 
 if __name__ == '__main__':

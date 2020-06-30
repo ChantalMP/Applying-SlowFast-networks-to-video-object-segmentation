@@ -11,7 +11,7 @@ def main():
 
     with open(os.path.join(imagesets_path, f'val.txt'), 'r') as f:
         tmp = f.readlines()
-    sequences_names = sorted({x.split()[0].split('/')[-2] for x in tmp})[:2]
+    sequences_names = sorted({x.split()[0].split('/')[-2] for x in tmp})
 
     results = defaultdict(list)
     all_results_model = {}
@@ -23,7 +23,7 @@ def main():
         results['JMean'].append(best_j_mean)
         results['Time'].append(total_time)
         results['Start-JF'].append(beginning_jf_mean)
-        all_results_model[seq_name] = all_results
+        all_results_model[seq] = all_results
         with open(save_file_path_all_results, 'w') as f:
             json.dump(all_results_model, f)
 

@@ -8,8 +8,8 @@ maskrcnn_batch_size = 12 if environment == 'colab' else 6  # 16 for google colab
 slow_pathway_size = 1
 fast_pathway_size = 1
 continue_training = False
-model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}'
-random_seed = 42
+model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}_63'
+random_seed = 63
 root_dir_path = Path('/content/gdrive/My Drive/Python Projects/adl4cv_root') if environment == 'colab' else Path('')
 writer_dir = (root_dir_path / 'runs') / model_name
 if writer_dir.exists():

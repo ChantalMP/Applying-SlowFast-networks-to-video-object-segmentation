@@ -26,3 +26,7 @@ eval_output_path = (data_output_path / 'eval_output')
 eval_output_path.mkdir(parents=True, exist_ok=True)
 pred_output_path = (data_output_path / 'pred_output')
 pred_output_path.mkdir(parents=True, exist_ok=True)
+osvos_save_file_path = data_output_path / f'osvos_results/{model_name}.txt'
+osvos_save_file_path.mkdir(parents=True, exist_ok=True)
+osvos_save_file_path_all_results = data_output_path / f'osvos_results/{model_name}_all_results.json'
+osvos_save_file_path_all_results.mkdir(parents=True, exist_ok=True)

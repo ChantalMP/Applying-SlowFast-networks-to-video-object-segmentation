@@ -20,3 +20,4 @@
 /maskrcnn/predicted_proposals_val_2017.pt
 /models_old/
 /maskrcnn/maskrcnn_model_with_augmentation.pth
+/models/

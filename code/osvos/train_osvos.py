@@ -1,10 +1,12 @@
-from helpers.constants import best_model_path, slow_pathway_size, fast_pathway_size, random_seed
-import random
-import torch
+from collections import defaultdict
+
 import numpy as np
 import os
+import random
+import torch
+
+from helpers.constants import best_model_path, slow_pathway_size, fast_pathway_size, random_seed
 from helpers.davis_evaluate import davis_evaluation
-from collections import defaultdict
 
 # As deterministic as possible
 random.seed(random_seed)
@@ -35,7 +37,7 @@ def evaluate_model(model, device, sequence_name):
 
 
 def main(sequence_name):
-    epochs = 3
+    epochs = 5
     lr = 0.001
     weight_decay = 0.0001
 

@@ -13,14 +13,14 @@ import pandas as pd
 from time import time
 
 
-def davis_evaluation(model, seq_name=None):
+def davis_evaluation(model, seq_name_to_process=None):
     transforms = Compose([ToTensor()])
-    sequences = 'all' if seq_name is None else seq_name
+    sequences = 'all' if seq_name_to_process is None else seq_name_to_process
     dataset = DAVISDataset(root='data/DAVIS_2016', subset='val', transforms=transforms, year='2016', sequences=sequences)
     dataloader = DataLoader(dataset, batch_size=None)
     model.eval()
     time_start = time()
-    task_type = 'unsupervised' if seq_name is None else 'semi-supervised'
+    task_type = 'unsupervised' if seq_name_to_process is None else 'semi-supervised'
 
     for seq_idx, seq in tqdm(enumerate(dataloader), total=len(dataloader), desc="Calculating Segmentations"):
         imgs, targets, seq_name = seq
@@ -69,7 +69,7 @@ def davis_evaluation(model, seq_name=None):
     total_time = time() - time_start
     print('\nTotal time:' + str(total_time))
 
-    if seq_name is None:
+    if seq_name_to_process is None:
         return table_g['J&F-Mean'][0], total_time
     else:
         return table_g['J&F-Mean'][0], table_seq['J-Mean'][0], table_seq['F-Mean'][0], total_time

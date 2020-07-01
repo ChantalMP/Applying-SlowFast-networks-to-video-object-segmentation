@@ -1,9 +1,10 @@
-import os
-from osvos.train_osvos import main as train_osvos
-from collections import defaultdict
-from helpers.constants import osvos_save_file_path, osvos_save_file_path_all_results
-import numpy as np
 import json
+from statistics import mean
+
+import os
+
+from helpers.constants import osvos_save_file_path, osvos_save_file_path_all_results
+from osvos.train_osvos import main as train_osvos
 
 
 def main():
@@ -13,31 +14,33 @@ def main():
         tmp = f.readlines()
     sequences_names = sorted({x.split()[0].split('/')[-2] for x in tmp})
 
-    results = defaultdict(list)
     all_results_model = {}
     for seq in sequences_names:
-        best_f_mean, best_j_mean, total_time, beginning_jf_mean, all_results = train_osvos(sequence_name=seq)
-        results['FMean'].append(best_f_mean)
-        results['JMean'].append(best_j_mean)
-        results['Time'].append(total_time)
-        results['Start-JF'].append(beginning_jf_mean)
+        all_results = train_osvos(sequence_name=seq)
         all_results_model[seq] = all_results
         with open(osvos_save_file_path_all_results, 'w') as f:
             json.dump(all_results_model, f)
 
-        j_mean = np.mean(results['FMean'])
-        f_mean = np.mean(results['JMean'])
-        jf_mean = (j_mean + f_mean) / 2
-        total_time = np.sum(results['Time'])
-        with open(osvos_save_file_path, 'w') as f:
-            # Print the results
-            print(f"--------------------------- Global results for val ---------------------------\n", file=f)
-            print(f'JF-Mean: {jf_mean}  F-Mean: {f_mean}    J-Mean: {j_mean}, total_time: {total_time}', file=f)
-            print(f"\n---------- Per sequence results for val ----------\n", file=f)
-            print("Sequence    J-Mean    F-Mean     Time    Start-JFMean", file=f)
-            for seq_name, fmean, jmean, time, start_jf in zip(sequences_names, results['FMean'], results['JMean'], results['Time'],
-                                                              results['Start-JF']):
-                print(f"{seq_name}  {jmean:.6f}    {fmean:.6f}    {time:.6f}    {start_jf}", file=f)
+    jf_means = []
+    j_means = []
+    f_means = []
+    eval_times = []
+    for key in all_results_model:
+        idx = len(all_results_model[key]) - 2
+        score = all_results_model[key][idx]
+        jf_means.append(score['jfmean'])
+        j_means.append(score['jmean'])
+        f_means.append(score['fmean'])
+        eval_times.append(score['eval_time'])
+
+    jf_mean = mean(jf_means)
+    j_mean = mean(j_means)
+    f_mean = mean(f_means)
+    total_time = mean(eval_times)
+    with open(osvos_save_file_path, 'w') as f:
+        # Print the results
+        print(f"--------------------------- Global results for val ---------------------------\n", file=f)
+        print(f'JF-Mean: {jf_mean}  F-Mean: {f_mean}    J-Mean: {j_mean}, total_time: {total_time}', file=f)
 
 
 if __name__ == '__main__':

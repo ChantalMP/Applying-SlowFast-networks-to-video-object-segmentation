@@ -59,15 +59,11 @@ def main(sequence_name):
     opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=weight_decay)
 
     global_step = 0
-    best_jf_mean = -1
-    best_j_mean = -1
-    best_f_mean = -1
-    best_total_time = -1
     all_results = defaultdict(dict)
 
     # First do an evaluation to check everything works
-    beginning_jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
-    all_results[-1] = {'jfmean': beginning_jf_mean, 'jmean': j_mean, 'fmean': f_mean, 'eval_time': total_time}
+    jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
+    all_results[-1] = {'jfmean': jf_mean, 'jmean': j_mean, 'fmean': f_mean, 'eval_time': total_time}
     for epoch in tqdm(range(0, epochs), total=epochs, desc="Epochs"):
         total_loss = 0.
         for idx, seq in enumerate(dataloader):
@@ -83,17 +79,11 @@ def main(sequence_name):
         jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
         all_results[epoch] = {'jfmean': jf_mean, 'jmean': j_mean, 'fmean': f_mean, 'eval_time': total_time}
 
-        if jf_mean > best_jf_mean:
-            best_jf_mean = jf_mean
-            best_f_mean = f_mean
-            best_j_mean = j_mean
-            best_total_time = total_time
-            print(f'Saving model with JF-Mean: {jf_mean}')
-            save_path = best_model_path.parent / f'{best_model_path.name.replace(".pth", "")}_osvos_{sequence_name}.pth'
-            torch.save(model.state_dict(), save_path)
+        save_path = best_model_path.parent / f'{best_model_path.name.replace(".pth", "")}_osvos_{sequence_name}.pth'
+        torch.save(model.state_dict(), save_path)
 
     print("Finished Training.")
-    return best_f_mean, best_j_mean, best_total_time, beginning_jf_mean, all_results
+    return all_results
 
 
 if __name__ == '__main__':

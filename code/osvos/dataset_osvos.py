@@ -1,15 +1,15 @@
-import os
 from glob import glob
+from math import ceil
+
 import numpy as np
+import os
+import torch
 from PIL import Image
 from copy import deepcopy
-
 from torch.utils.data import Dataset
-
-import torch
-from DataAugmentationForObjectDetection.data_aug import data_aug
-from math import ceil
 from torchvision.transforms import Compose, ToTensor
+
+from DataAugmentationForObjectDetection.data_aug import data_aug
 
 
 class DAVISSequenceDataset(Dataset):
@@ -31,8 +31,8 @@ class DAVISSequenceDataset(Dataset):
         self.sequence_info['name'] = sequence_name
 
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        self.scale = data_aug.RandomScale(scale=(0.5))
-        self.rotate = data_aug.RandomRotate(angle=15)
+        self.scale = data_aug.RandomScale(scale=(0.25))
+        self.rotate = data_aug.RandomRotate(angle=30)
 
     def __len__(self):
         return 200
@@ -122,17 +122,18 @@ class DAVISSequenceDataset(Dataset):
             for img_idx in range(len(imgs)):
                 imgs[img_idx] = self.transforms(imgs[img_idx].copy())
 
-        # zero padding in front
+        # padding in front
         padding_count = self.fast_pathway_size // 2
-        imgs = torch.cat([torch.zeros_like(imgs[0].repeat(padding_count, 1, 1, 1)), torch.stack(imgs)])
+        reversed_frames = list(reversed(imgs[1:]))  # TODO only tested for odd numbers
+        assert padding_count == len(reversed_frames)
+        # imgs = torch.cat([torch.zeros_like(imgs[0].repeat(padding_count, 1, 1, 1)), torch.stack(imgs)])
+        imgs = torch.cat([torch.stack(reversed_frames), torch.stack(imgs)])
         imgs = [elem for elem in imgs]
 
         return imgs, target
 
 
 if __name__ == '__main__':
-    from torchvision import transforms
-    from osvos import osvos_transforms as tr
 
     ds = DAVISSequenceDataset(root='data/DAVIS_2016', sequence_name='camel', fast_pathway_size=7, transforms=Compose([ToTensor()]))
 

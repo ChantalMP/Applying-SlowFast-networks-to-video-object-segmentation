@@ -124,11 +124,12 @@ class DAVISSequenceDataset(Dataset):
 
         # padding in front
         padding_count = self.fast_pathway_size // 2
-        reversed_frames = list(reversed(imgs[1:]))  # TODO only tested for odd numbers
-        assert padding_count == len(reversed_frames)
-        # imgs = torch.cat([torch.zeros_like(imgs[0].repeat(padding_count, 1, 1, 1)), torch.stack(imgs)])
-        imgs = torch.cat([torch.stack(reversed_frames), torch.stack(imgs)])
-        imgs = [elem for elem in imgs]
+        if padding_count > 0:
+            reversed_frames = list(reversed(imgs[1:]))  # TODO only tested for odd numbers
+            assert padding_count == len(reversed_frames)
+            # imgs = torch.cat([torch.zeros_like(imgs[0].repeat(padding_count, 1, 1, 1)), torch.stack(imgs)])
+            imgs = torch.cat([torch.stack(reversed_frames), torch.stack(imgs)])
+            imgs = [elem for elem in imgs]
 
         return imgs, target
 

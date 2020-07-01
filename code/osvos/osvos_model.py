@@ -54,7 +54,8 @@ class OsvosSegmentationModel(SegmentationModel):
         transformed_images, _ = self.maskrcnn_model.transform(images)
         image_features = self.compute_maskrcnn_features(transformed_images.tensors)
         rpn_proposals = self.compute_rpn_proposals(transformed_images, image_features)
-        target['proposals'] = rpn_proposals[0].cpu()
+        image_feature_idx = self.fast_pathway_size // 2
+        target['proposals'] = rpn_proposals[image_feature_idx].cpu()
         del rpn_proposals
 
         _, targets = self.maskrcnn_model.transform([images[0]], [target])
@@ -64,8 +65,7 @@ class OsvosSegmentationModel(SegmentationModel):
 
         slow_valid_features = []
         fast_valid_features = []
-        image_feature_idx = self.fast_pathway_size // 2
-                    # right now slow sees the middle 4 frames, we should consider the option of seeing 4 frames through skipping
+        # right now slow sees the middle 4 frames, we should consider the option of seeing 4 frames through skipping
         slow_valid_features.append(self._slice_features(image_features, image_feature_idx, self.slow_pathway_size))
         fast_valid_features.append(self._slice_features(image_features, image_feature_idx, self.fast_pathway_size))
         slow_fast_features = self.slow_fast.temporally_enhance_features(slow_valid_features, fast_valid_features)

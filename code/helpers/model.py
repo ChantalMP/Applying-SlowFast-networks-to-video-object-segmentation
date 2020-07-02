@@ -270,21 +270,8 @@ class SegmentationModel(nn.Module):
 
         return indexed_features
 
-    '''Padding at beginning and end of the sequence (we do not have real neighbouring feature maps there)'''
-
-    def apply_padding(self, image_features):
-        padding_count = self.fast_pathway_size // 2
-        for key, image_feature in image_features.items():
-            image_features[key] = torch.cat(
-                [torch.zeros_like(image_feature[:1, :, :, :].repeat(padding_count, 1, 1, 1)), image_feature])
-
-        for key, image_feature in image_features.items():
-            image_features[key] = torch.cat(
-                [image_feature, torch.zeros_like(image_feature[:1, :, :, :].repeat(padding_count, 1, 1, 1))])
-
-        return image_features
-
     def forward(self, images, targets=None, optimizer=None):
+        self.features_cache = {}
         original_image_sizes = []
         for img in images:
             val = img.shape[-2:]
@@ -341,7 +328,7 @@ class SegmentationModel(nn.Module):
 
             target[0]['proposals'] = rpn_proposals[0]
             slow_valid_features = [
-                self._slice_features(image_features, image_feature_idx=self.slow_pathway_size // 2, pathway_size=self.slow_pathway_size)]  # TODO test this well
+                self._slice_features(image_features, image_feature_idx=padded_idx, pathway_size=self.slow_pathway_size)]  # TODO test this well
             fast_valid_features = [image_features]
 
             slow_fast_features = self.slow_fast.temporally_enhance_features(slow_valid_features, fast_valid_features)

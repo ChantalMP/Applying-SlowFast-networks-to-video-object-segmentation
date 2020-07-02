@@ -1,13 +1,12 @@
-from math import ceil, floor
-import torch
-from torch import nn
-import torchvision
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
-from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 from collections import OrderedDict
-from helpers.constants import batch_size, maskrcnn_batch_size
+from math import ceil, floor
 
+import torch
+import torchvision
+from torch import nn
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.image_list import ImageList
+from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
 
 def get_model_instance_segmentation(num_classes):
@@ -175,9 +174,9 @@ class SegmentationModel(nn.Module):
 
         # Freeze most of the weights
         for param in self.maskrcnn_model.backbone.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
         for param in self.maskrcnn_model.rpn.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
 
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
@@ -185,26 +184,44 @@ class SegmentationModel(nn.Module):
         self.slow_fast = SlowFastLayers(256, device=device, slow_pathway_size=slow_pathway_size,
                                         fast_pathway_size=fast_pathway_size)
 
-        self.bs = batch_size
-        self.maskrcnn_bs = maskrcnn_batch_size
         self.maskrcnn_model.roi_heads.detections_per_img = 10
+        self.features_cache = {}
 
-    @torch.no_grad()
-    def compute_maskrcnn_features(self, images_tensors):
-        self.maskrcnn_model.eval()
+    def compute_maskrcnn_features(self, images_tensors, indices):  # TODO code review this function
+        for key in list(self.features_cache.keys()):  # Delete features from cache that will never be used
+            if key < indices[0]:
+                self.features_cache.pop(key)
+
         all_features = OrderedDict()
-        # Extract feature from respective extractor
-        for i in range(ceil(len(images_tensors) / self.maskrcnn_bs)):
-            batch_imgs = images_tensors[i * self.maskrcnn_bs:(i + 1) * self.maskrcnn_bs].to(self.device)
-            batch_features = self.maskrcnn_model.backbone(batch_imgs)
-            for key, value in batch_features.items():
-                if key not in all_features:
-                    all_features[key] = value.cpu()
-                else:
-                    all_features[key] = torch.cat([all_features[key], value.cpu()])
 
-        if self.training:
-            self.maskrcnn_model.train()
+        for idx in indices:
+            if idx in self.features_cache:
+                features = self._detach_features(self.features_cache[idx])
+            else:
+                if idx >= 0 and idx < len(images_tensors):
+                    batch_imgs = images_tensors[idx:idx + 1].to(self.device)
+                    features = self.maskrcnn_model.backbone(batch_imgs)
+                    self.features_cache[idx] = features
+                else:
+                    continue
+            for key, value in features.items():
+                if key not in all_features:
+                    all_features[key] = value
+                else:
+                    all_features[key] = torch.cat([all_features[key], value])
+
+        left_pad_needed = len([elem for elem in indices if elem < 0])
+        right_pad_needed = len([elem for elem in indices if elem >= len(images_tensors)])
+        if left_pad_needed > 0:
+            for key, image_feature in all_features.items():
+                all_features[key] = torch.cat(
+                    [torch.zeros_like(image_feature[:1, :, :, :].repeat(left_pad_needed, 1, 1, 1)), image_feature])
+
+        if right_pad_needed > 0:
+            for key, image_feature in all_features.items():
+                all_features[key] = torch.cat(
+                    [image_feature, torch.zeros_like(image_feature[:1, :, :, :].repeat(right_pad_needed, 1, 1, 1))])
+
         return all_features
 
     def batch_slice_features(self, features: OrderedDict, begin, end):
@@ -214,20 +231,11 @@ class SegmentationModel(nn.Module):
 
         return batch_features
 
-    @torch.no_grad()
-    def compute_rpn_proposals(self, images, features):
+    def compute_rpn_proposals(self, image_tensors, image_sizes, features, target):
+        batch_imgs = ImageList(image_tensors.to(self.device), image_sizes)
+        batch_proposals, proposal_loss = self.maskrcnn_model.rpn(batch_imgs, features, target)
 
-        self.maskrcnn_model.rpn.eval()
-        all_proposals = []
-        bs = 4
-        for i in range(ceil(len(images.tensors) / bs)):
-            batch_imgs = ImageList(images.tensors[i * bs:(i + 1) * bs].to(self.device),
-                                   images.image_sizes[i * bs:(i + 1) * bs])
-            batch_features = self.batch_slice_features(features, begin=i * bs, end=(i + 1) * bs)
-            batch_proposals, _ = self.maskrcnn_model.rpn(batch_imgs, batch_features, None)
-            all_proposals.extend(batch_proposals)
-
-        return all_proposals
+        return batch_proposals, proposal_loss
 
     def _slice_features(self, features: OrderedDict, image_feature_idx, pathway_size):
         batch_features = OrderedDict()
@@ -238,9 +246,29 @@ class SegmentationModel(nn.Module):
         return batch_features
 
     def _targets_to_device(self, targets, device):
+        device_targets = []
         for i in range(len(targets)):
+            device_target = OrderedDict()
             for key, value in targets[i].items():
-                targets[i][key] = value.to(device)
+                device_target[key] = value.to(device)
+
+            device_targets.append(device_target)
+
+        return device_targets
+
+    def _index_features(self, features, i_begin, i_end):
+        indexed_features = OrderedDict()
+        for key, value in features.items():
+            indexed_features[key] = features[key][i_begin:i_end]
+
+        return indexed_features
+
+    def _detach_features(self, features):
+        indexed_features = OrderedDict()
+        for key, value in features.items():
+            indexed_features[key] = features[key].detach()
+
+        return indexed_features
 
     '''Padding at beginning and end of the sequence (we do not have real neighbouring feature maps there)'''
 
@@ -263,17 +291,12 @@ class SegmentationModel(nn.Module):
             assert len(val) == 2
             original_image_sizes.append((val[0], val[1]))
         transformed_images, _ = self.maskrcnn_model.transform(images)
-        image_features = self.compute_maskrcnn_features(transformed_images.tensors)
-        rpn_proposals = self.compute_rpn_proposals(transformed_images, image_features)
-        for elem, proposal in zip(targets, rpn_proposals):
-            elem['proposals'] = proposal.cpu()
-        del rpn_proposals
 
         '''Deal with imgs that have no objects in them'''
         valid_features_mask = []
         valid_targets = []
         valid_imgs = []
-        for idx in range(len(image_features['0'])):
+        for idx in range(len(transformed_images.tensors)):
             if 'boxes' not in targets[idx] or len(targets[idx]['boxes']) == 0:  # If no box predictions just skip
                 valid_features_mask.append(0)
                 continue
@@ -286,7 +309,6 @@ class SegmentationModel(nn.Module):
 
         del valid_imgs, valid_targets
 
-        image_features = self.apply_padding(image_features)
         images = transformed_images
         full_targets = []
         pointer = 0
@@ -301,40 +323,39 @@ class SegmentationModel(nn.Module):
 
         total_loss = 0.
         all_detections = []
+        count = 0
 
-        for i in range(ceil(len(valid_features_mask) / self.bs)):
-            feature_idxs = range(i * self.bs, min((i + 1) * self.bs, len(valid_features_mask)))
-            slow_valid_features = []
-            fast_valid_features = []
-            batch_targets = []
-            for feature_idx in feature_idxs:
-                if valid_features_mask[feature_idx] == 1:
-                    image_feature_idx = feature_idx + self.fast_pathway_size // 2
-                    # right now slow sees the middle 4 frames, we should consider the option of seeing 4 frames through skipping
-                    slow_valid_features.append(
-                        self._slice_features(image_features, image_feature_idx, self.slow_pathway_size))
-                    fast_valid_features.append(
-                        self._slice_features(image_features, image_feature_idx, self.fast_pathway_size))
-
-                    batch_targets.append(targets[feature_idx])  # TODO make runnable without targets
-
-            if len(slow_valid_features) == 0:  # If no detections in batch, skip
+        for feature_idx in range(len(valid_features_mask)):
+            if valid_features_mask[feature_idx] != 1:
                 continue
+
+            padded_idx = self.fast_pathway_size // 2
+            indices = range(feature_idx - floor(self.fast_pathway_size / 2), feature_idx + ceil(self.fast_pathway_size / 2))
+            image_features = self.compute_maskrcnn_features(transformed_images.tensors, indices)
+            sliced_features = self._index_features(image_features, padded_idx, padded_idx + 1)
+            target = targets[feature_idx:feature_idx + 1]
+            target = self._targets_to_device(target, self.device)
+            rpn_proposals, proposal_loses = self.compute_rpn_proposals(transformed_images.tensors[feature_idx:feature_idx + 1],
+                                                                       transformed_images.image_sizes[feature_idx:feature_idx + 1], sliced_features,
+                                                                       target)
+
+            target[0]['proposals'] = rpn_proposals[0]
+            slow_valid_features = [
+                self._slice_features(image_features, image_feature_idx=self.slow_pathway_size // 2, pathway_size=self.slow_pathway_size)]  # TODO test this well
+            fast_valid_features = [image_features]
+
             slow_fast_features = self.slow_fast.temporally_enhance_features(slow_valid_features, fast_valid_features)
-            batch_original_image_sizes = original_image_sizes[i * self.bs:(i + 1) * self.bs]
+            batch_original_image_sizes = original_image_sizes[feature_idx:feature_idx + 1]
             batch_image_sizes = images.image_sizes[0:1] * len(
                 batch_original_image_sizes)  # Because all images in one sequence have the same size
-            self._targets_to_device(batch_targets, self.device)
-            proposals = [elem['proposals'] for elem in batch_targets]  # predicted boxes
+            proposals = [elem['proposals'] for elem in target]  # predicted boxes
 
-            detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals,
-                                                                        batch_image_sizes, batch_targets)
-            detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes,
-                                                                   batch_original_image_sizes)
-            self._targets_to_device(detections, device=torch.device('cpu'))
+            detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals, batch_image_sizes, target)
+            detections = self.maskrcnn_model.transform.postprocess(detections, batch_image_sizes, batch_original_image_sizes)
+            detections = self._targets_to_device(detections, device=torch.device('cpu'))
             all_detections.extend(detections)
 
-            del feature_idxs, slow_valid_features, fast_valid_features, batch_targets, slow_fast_features, proposals
+            del slow_valid_features, fast_valid_features, target, slow_fast_features
 
             if self.training:
                 losses = {}
@@ -344,11 +365,27 @@ class SegmentationModel(nn.Module):
                     else:
                         losses[key] += value
 
+                for key, value in proposal_loses.items():
+                    if key not in losses:
+                        losses[key] = value
+                    else:
+                        losses[key] += value
+
                 losses = sum(loss for loss in losses.values())
                 total_loss += losses.item()
                 losses.backward()
-                optimizer.step()
-                optimizer.zero_grad()
+                count += 1
+                del losses
+                if count % 2 == 0:
+                    optimizer.step()
+                    optimizer.zero_grad()
+
+        # if self.training:
+        #     for elem in optimizer.param_groups[0]['params']:
+        #         if elem.grad is not None:
+        #             elem.grad = elem.grad / count
+        #     optimizer.step()
+        #     optimizer.zero_grad()
 
         # Append empty detection for non valid ids
         if not self.training:

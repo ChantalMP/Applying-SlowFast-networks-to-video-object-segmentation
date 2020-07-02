@@ -69,11 +69,11 @@ class OsvosSegmentationModel(SegmentationModel):
         slow_valid_features.append(self._slice_features(image_features, image_feature_idx, self.slow_pathway_size))
         fast_valid_features.append(self._slice_features(image_features, image_feature_idx, self.fast_pathway_size))
         slow_fast_features = self.slow_fast.temporally_enhance_features(slow_valid_features, fast_valid_features)
-        self._targets_to_device(targets, self.device)
+        targets = self._targets_to_device(targets, self.device)
         proposals = [elem['proposals'] for elem in targets]  # predicted boxes
         detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals, images.image_sizes, targets)
         detections = self.maskrcnn_model.transform.postprocess(detections, images.image_sizes, original_image_sizes)
-        self._targets_to_device(detections, device=torch.device('cpu'))
+        detections = self._targets_to_device(detections, device=torch.device('cpu'))
         del slow_valid_features, fast_valid_features, slow_fast_features, proposals
 
         if self.training:

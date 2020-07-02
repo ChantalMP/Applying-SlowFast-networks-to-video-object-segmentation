@@ -1,10 +1,9 @@
 from pathlib import Path
+
 import shutil
 
 environment = 'local'  # or colab
 print(f'Environment is {environment}')
-batch_size = 2
-maskrcnn_batch_size = 12 if environment == 'colab' else 6  # 16 for google colab, 6 for local
 slow_pathway_size = 1
 fast_pathway_size = 1
 continue_training = False

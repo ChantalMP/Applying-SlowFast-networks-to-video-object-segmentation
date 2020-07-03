@@ -19,11 +19,12 @@
 # Evaluation
 # Slow rate of fast how is it etc etc.
 
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, continue_training, random_seed, writer_dir
-import random
-import torch
 import numpy as np
 import os
+import random
+import torch
+
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, continue_training, random_seed, writer_dir
 
 # As deterministic as possible
 random.seed(random_seed)
@@ -57,7 +58,7 @@ def main():
     # TODO test eval time working correctly
     # TODO test fixing working correctly
     epochs = 20
-    lr = 0.001
+    lr = 0.0005
     weight_decay = 0.0001
 
     transforms = Compose([ToTensor()])

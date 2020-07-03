@@ -2,11 +2,12 @@ from pathlib import Path
 
 import shutil
 
-environment = 'local'  # or colab
+environment = 'colab'  # or colab
 print(f'Environment is {environment}')
-slow_pathway_size = 1
-fast_pathway_size = 1
+slow_pathway_size = 7
+fast_pathway_size = 7
 continue_training = False
+use_caching = False
 model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}'
 random_seed = 63
 root_dir_path = Path('/content/gdrive/My Drive/Python Projects/adl4cv_root') if environment == 'colab' else Path('')

@@ -8,6 +8,8 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.image_list import ImageList
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
+from helpers.constants import use_caching
+
 
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
@@ -195,13 +197,14 @@ class SegmentationModel(nn.Module):
         all_features = OrderedDict()
 
         for idx in indices:
-            if idx in self.features_cache:
+            if use_caching and idx in self.features_cache:
                 features = self._detach_features(self.features_cache[idx])
             else:
                 if idx >= 0 and idx < len(images_tensors):
                     batch_imgs = images_tensors[idx:idx + 1].to(self.device)
                     features = self.maskrcnn_model.backbone(batch_imgs)
-                    self.features_cache[idx] = features
+                    if use_caching:
+                        self.features_cache[idx] = features
                 else:
                     continue
             for key, value in features.items():
@@ -366,13 +369,6 @@ class SegmentationModel(nn.Module):
                 if count % 2 == 0:
                     optimizer.step()
                     optimizer.zero_grad()
-
-        # if self.training:
-        #     for elem in optimizer.param_groups[0]['params']:
-        #         if elem.grad is not None:
-        #             elem.grad = elem.grad / count
-        #     optimizer.step()
-        #     optimizer.zero_grad()
 
         # Append empty detection for non valid ids
         if not self.training:

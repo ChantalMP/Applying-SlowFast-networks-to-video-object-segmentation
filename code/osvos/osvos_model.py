@@ -1,6 +1,3 @@
-from collections import OrderedDict
-from math import ceil
-
 import torch
 
 from helpers.model import SegmentationModel
@@ -18,19 +15,19 @@ class OsvosSegmentationModel(SegmentationModel):
         self.maskrcnn_model.roi_heads.detections_per_img = 10
         self.accumulator = 0
 
-    def compute_maskrcnn_features(self, images_tensors):
-        all_features = OrderedDict()
-        # Extract feature from respective extractor
-        for i in range(ceil(len(images_tensors) / self.maskrcnn_bs)):
-            batch_imgs = images_tensors[i * self.maskrcnn_bs:(i + 1) * self.maskrcnn_bs].to(self.device)
-            batch_features = self.maskrcnn_model.backbone(batch_imgs)
-            for key, value in batch_features.items():
-                if key not in all_features:
-                    all_features[key] = value.cpu()
-                else:
-                    all_features[key] = torch.cat([all_features[key], value.cpu()])
-
-        return all_features
+    # def compute_maskrcnn_features(self, images_tensors):
+    #     all_features = OrderedDict()
+    #     # Extract feature from respective extractor
+    #     for i in range(ceil(len(images_tensors) / self.maskrcnn_bs)):
+    #         batch_imgs = images_tensors[i * self.maskrcnn_bs:(i + 1) * self.maskrcnn_bs].to(self.device)
+    #         batch_features = self.maskrcnn_model.backbone(batch_imgs)
+    #         for key, value in batch_features.items():
+    #             if key not in all_features:
+    #                 all_features[key] = value.cpu()
+    #             else:
+    #                 all_features[key] = torch.cat([all_features[key], value.cpu()])
+    #
+    #     return all_features
 
     #
     # def compute_rpn_proposals(self, images, features):

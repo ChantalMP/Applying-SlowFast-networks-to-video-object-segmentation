@@ -38,7 +38,7 @@ def evaluate_model(model, device, sequence_name):
 
 def main(sequence_name):
     epochs = 5
-    lr = 0.0005
+    lr = 0.0005  # TODO fine tune lr
     weight_decay = 0.0001
 
     transforms = Compose([ToTensor()])

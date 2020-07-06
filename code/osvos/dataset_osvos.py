@@ -31,7 +31,6 @@ class DAVISSequenceDataset(Dataset):
         self.sequence_info['name'] = sequence_name
 
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        # TODO debug this
         if cfg is None:
             self.scale = data_aug.RandomScale(scale=(0.25))
         else:

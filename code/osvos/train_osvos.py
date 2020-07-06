@@ -36,18 +36,22 @@ def evaluate_model(model, device, sequence_name):
     return jf_mean, j_mean, f_mean, total_time
 
 
-def main(sequence_name):
-    cfg = object
-    epochs = cfg.epochs
-    lr = cfg.lr
+def main(sequence_name, cfg=None):
+    if cfg is None:
+        epochs = 5
+        lr = 0.001
+    else:
+        epochs = cfg.epochs
+        lr = cfg.lr
     weight_decay = 0.0001
 
     transforms = Compose([ToTensor()])
-    dataset = DAVISSequenceDataset(root='data/DAVIS_2016', transforms=transforms, sequence_name=sequence_name, fast_pathway_size=fast_pathway_size)
+    dataset = DAVISSequenceDataset(root='data/DAVIS_2016', transforms=transforms, sequence_name=sequence_name, fast_pathway_size=fast_pathway_size,
+                                   cfg=cfg)
     dataloader = DataLoader(dataset, batch_size=None)
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model: OsvosSegmentationModel = OsvosSegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
-                                                           fast_pathway_size=fast_pathway_size)
+                                                           fast_pathway_size=fast_pathway_size, cfg=cfg)
     model.load_state_dict(torch.load(best_model_path))
     model.to(device)
     model.train()
@@ -81,8 +85,10 @@ def main(sequence_name):
         jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
         all_results[epoch] = {'jfmean': jf_mean, 'jmean': j_mean, 'fmean': f_mean, 'eval_time': total_time}
 
-        save_path = best_model_path.parent / f'{best_model_path.name.replace(".pth", "")}_osvos_{sequence_name}.pth'
-        torch.save(model.state_dict(), save_path)
+        if cfg is None:
+            print("Saving model.")
+            save_path = best_model_path.parent / f'{best_model_path.name.replace(".pth", "")}_osvos_{sequence_name}.pth'
+            torch.save(model.state_dict(), save_path)
 
     print("Finished Training.")
     return all_results

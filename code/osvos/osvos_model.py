@@ -8,7 +8,7 @@ from helpers.model import SegmentationModel
 class OsvosSegmentationModel(SegmentationModel):
     def __init__(self, device, slow_pathway_size, fast_pathway_size, batchsize=8, cfg=None):
         super(OsvosSegmentationModel, self).__init__(device, slow_pathway_size, fast_pathway_size)
-        if self.cfg is None:
+        if cfg is None:
             # Unfreeze all weights
             for param in self.maskrcnn_model.backbone.parameters():
                 param.requires_grad = True
@@ -16,14 +16,12 @@ class OsvosSegmentationModel(SegmentationModel):
                 param.requires_grad = True
         else:
             self.requires_grad = {'backbone': True, 'slowfast': True}
-            if self.cfg.freeze == 'sf':
+            if cfg.freeze == 'SF':
                 self.requires_grad['slowfast'] = False
-
-            elif self.cfg.freeze == 'bb_sf':
+            elif cfg.freeze == 'BB_SF':
                 self.requires_grad['slowfast'] = False
                 self.requires_grad['backbone'] = False
 
-            # TODO test this
             for param in self.maskrcnn_model.backbone.parameters():
                 param.requires_grad = self.requires_grad['backbone']
             for param in self.maskrcnn_model.rpn.parameters():
@@ -59,13 +57,12 @@ class OsvosSegmentationModel(SegmentationModel):
                                                                        transformed_images.image_sizes[padded_idx:padded_idx + 1],
                                                                        sliced_features,
                                                                        target)
-        # TODO test these gradients
         target[0]['proposals'] = rpn_proposals[0]
         slow_valid_features = [
-            self._slice_features(image_features, image_feature_idx=padded_idx, pathway_size=self.slow_pathway_size)]  # TODO test this well
+            self._slice_features(image_features, image_feature_idx=padded_idx, pathway_size=self.slow_pathway_size)]
         fast_valid_features = [image_features]
 
-        with torch.set_grad_enabled(self.requires_grad['slowfast']):
+        with torch.set_grad_enabled(self.requires_grad['backbone'] or self.requires_grad['slowfast']):
             slow_fast_features = self.slow_fast.temporally_enhance_features(slow_valid_features, fast_valid_features)
         proposals = [elem['proposals'] for elem in target]  # predicted boxes
         detections, detector_losses = self.maskrcnn_model.roi_heads(slow_fast_features, proposals, images.image_sizes, target)

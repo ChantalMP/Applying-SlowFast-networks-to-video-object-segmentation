@@ -13,7 +13,7 @@ from DataAugmentationForObjectDetection.data_aug import data_aug
 
 
 class DAVISSequenceDataset(Dataset):
-    def __init__(self, root, sequence_name, fast_pathway_size, transforms=None, resolution='480p'):
+    def __init__(self, root, sequence_name, fast_pathway_size, transforms=None, resolution='480p', cfg=None):
         self.root = root
         self.sequence_name = sequence_name
         self.fast_pathway_size = fast_pathway_size
@@ -31,7 +31,11 @@ class DAVISSequenceDataset(Dataset):
         self.sequence_info['name'] = sequence_name
 
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
-        self.scale = data_aug.RandomScale(scale=(0.25))
+        # TODO debug this
+        if cfg is None:
+            self.scale = data_aug.RandomScale(scale=(0.25))
+        else:
+            self.scale = data_aug.RandomScale(scale=(cfg.scale))
         self.rotate = data_aug.RandomRotate(angle=30)
 
     def __len__(self):

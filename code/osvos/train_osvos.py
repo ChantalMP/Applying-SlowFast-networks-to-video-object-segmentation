@@ -67,7 +67,6 @@ def main(sequence_name, cfg=None):
     all_results = defaultdict(dict)
 
     # First do an evaluation to check everything works
-    # TODO evaluate model can remain the same all the time?
     jf_mean, j_mean, f_mean, total_time = evaluate_model(model=model, device=device, sequence_name=sequence_name)
     all_results[-1] = {'jfmean': jf_mean, 'jmean': j_mean, 'fmean': f_mean, 'eval_time': total_time}
     for epoch in tqdm(range(0, epochs), total=epochs, desc="Epochs"):

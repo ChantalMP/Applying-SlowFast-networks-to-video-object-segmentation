@@ -34,7 +34,6 @@ class OsvosSegmentationModel(SegmentationModel):
         self.accumulator = 0
 
     def forward(self, images, target=None, optimizer=None):
-        self.features_cache = {}
         original_image_sizes = []
         for img in images:
             val = img.shape[-2:]

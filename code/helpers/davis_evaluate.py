@@ -1,16 +1,20 @@
-from torch.utils.data import DataLoader
-from helpers.dataset import DAVISDataset
+from pathlib import Path
+from time import time
+
+import numpy as np
+import pandas as pd
 import torch
+from PIL import Image
+from copy import deepcopy
+from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
-import numpy as np
-from copy import deepcopy
-from PIL import Image
-from pathlib import Path
-from helpers.constants import model_name
+
 from davis2017_evaluation.davis2017.evaluation import DAVISEvaluation
-import pandas as pd
-from time import time
+from helpers.constants import best_model_path, slow_pathway_size, fast_pathway_size
+from helpers.constants import model_name
+from helpers.dataset import DAVISDataset
+from helpers.model import SegmentationModel
 
 
 def davis_evaluation(model, seq_name_to_process=None):
@@ -73,3 +77,18 @@ def davis_evaluation(model, seq_name_to_process=None):
         return table_g['J&F-Mean'][0], total_time
     else:
         return table_g['J&F-Mean'][0], table_seq['J-Mean'][0], table_seq['F-Mean'][0], total_time
+
+
+if __name__ == '__main__':
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    model: SegmentationModel = SegmentationModel(device=device, slow_pathway_size=slow_pathway_size,
+                                                 fast_pathway_size=fast_pathway_size)
+    model.to(device)
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f'{total_params:,} total parameters.')
+    total_trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f'{total_trainable_params:,} training parameters.')
+    model.load_state_dict(torch.load(best_model_path))
+    # First do an evaluation to check everything works
+    davis_evaluation(model)

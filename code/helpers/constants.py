@@ -29,3 +29,5 @@ osvos_save_root_path = data_output_path / f'osvos_results'
 osvos_save_root_path.mkdir(parents=True, exist_ok=True)
 osvos_save_file_path = osvos_save_root_path / f'{model_name}.txt'
 osvos_save_file_path_all_results = osvos_save_root_path / f'{model_name}_all_results.json'
+osvos_experiments_path = data_output_path / "osvos_experiments"
+osvos_experiments_path.mkdir(parents=True, exist_ok=True)

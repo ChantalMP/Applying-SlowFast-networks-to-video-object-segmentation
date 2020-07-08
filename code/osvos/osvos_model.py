@@ -8,6 +8,7 @@ from helpers.model import SegmentationModel
 class OsvosSegmentationModel(SegmentationModel):
     def __init__(self, device, slow_pathway_size, fast_pathway_size, batchsize=8, cfg=None):
         super(OsvosSegmentationModel, self).__init__(device, slow_pathway_size, fast_pathway_size)
+        self.use_caching = False
         if cfg is None:
             # Unfreeze all weights
             for param in self.maskrcnn_model.backbone.parameters():
@@ -21,6 +22,7 @@ class OsvosSegmentationModel(SegmentationModel):
             elif cfg.freeze == 'BB_SF':
                 self.requires_grad['slowfast'] = False
                 self.requires_grad['backbone'] = False
+                self.use_caching = True
 
             for param in self.maskrcnn_model.backbone.parameters():
                 param.requires_grad = self.requires_grad['backbone']
@@ -34,6 +36,7 @@ class OsvosSegmentationModel(SegmentationModel):
         self.accumulator = 0
 
     def forward(self, images, target=None, optimizer=None):
+        self.features_cache = {}
         original_image_sizes = []
         for img in images:
             val = img.shape[-2:]

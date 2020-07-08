@@ -7,8 +7,7 @@ print(f'Environment is {environment}')
 slow_pathway_size = 1
 fast_pathway_size = 1
 continue_training = False
-use_caching = False  # At least once trained, turning this on is probably a good idea (make sure it still loads the correct model)
-model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}_{use_caching}'
+model_name = f'model_maskrcnn_slowfast_sp_{slow_pathway_size}fp_{fast_pathway_size}'
 random_seed = 63
 root_dir_path = Path('/content/gdrive/My Drive/Python Projects/adl4cv_root') if environment == 'colab' else Path('')
 writer_dir = (root_dir_path / 'runs') / model_name

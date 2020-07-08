@@ -8,8 +8,6 @@ from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 from torchvision.models.detection.image_list import ImageList
 from torchvision.models.detection.mask_rcnn import MaskRCNNPredictor
 
-from helpers.constants import use_caching
-
 
 def get_model_instance_segmentation(num_classes):
     model = torchvision.models.detection.maskrcnn_resnet50_fpn(pretrained=True)
@@ -176,9 +174,9 @@ class SegmentationModel(nn.Module):
 
         # Freeze most of the weights
         for param in self.maskrcnn_model.backbone.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
         for param in self.maskrcnn_model.rpn.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
 
         self.slow_pathway_size = slow_pathway_size
         self.fast_pathway_size = fast_pathway_size
@@ -188,6 +186,7 @@ class SegmentationModel(nn.Module):
 
         self.maskrcnn_model.roi_heads.detections_per_img = 10
         self.features_cache = {}
+        self.use_caching = True  # as we do not train backbone we can reuse the features always
 
     def compute_maskrcnn_features(self, images_tensors, indices):  # TODO code review this function
         for key in list(self.features_cache.keys()):  # Delete features from cache that will never be used
@@ -197,13 +196,13 @@ class SegmentationModel(nn.Module):
         all_features = OrderedDict()
 
         for idx in indices:
-            if use_caching and idx in self.features_cache:
+            if self.use_caching and idx in self.features_cache:
                 features = self._detach_features(self.features_cache[idx])
             else:
                 if idx >= 0 and idx < len(images_tensors):
                     batch_imgs = images_tensors[idx:idx + 1].to(self.device)
                     features = self.maskrcnn_model.backbone(batch_imgs)
-                    if use_caching:
+                    if self.use_caching:
                         self.features_cache[idx] = features
                 else:
                     continue
@@ -274,6 +273,7 @@ class SegmentationModel(nn.Module):
         return indexed_features
 
     def forward(self, images, targets=None, optimizer=None):
+        # TODO test
         self.features_cache = {}
         original_image_sizes = []
         for img in images:
@@ -321,13 +321,16 @@ class SegmentationModel(nn.Module):
 
             padded_idx = self.fast_pathway_size // 2
             indices = range(feature_idx - floor(self.fast_pathway_size / 2), feature_idx + ceil(self.fast_pathway_size / 2))
-            image_features = self.compute_maskrcnn_features(transformed_images.tensors, indices)
+            with torch.no_grad():
+                image_features = self.compute_maskrcnn_features(transformed_images.tensors, indices)
             sliced_features = self._index_features(image_features, padded_idx, padded_idx + 1)
             target = targets[feature_idx:feature_idx + 1]
             target = self._targets_to_device(target, self.device)
-            rpn_proposals, proposal_loses = self.compute_rpn_proposals(transformed_images.tensors[feature_idx:feature_idx + 1],
-                                                                       transformed_images.image_sizes[feature_idx:feature_idx + 1], sliced_features,
-                                                                       target)
+            with torch.no_grad():
+                rpn_proposals, proposal_loses = self.compute_rpn_proposals(transformed_images.tensors[feature_idx:feature_idx + 1],
+                                                                           transformed_images.image_sizes[feature_idx:feature_idx + 1],
+                                                                           sliced_features,
+                                                                           target)
 
             target[0]['proposals'] = rpn_proposals[0]
             slow_valid_features = [

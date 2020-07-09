@@ -9,7 +9,7 @@ from osvos.train_osvos import main as train_osvos
 def main():
     freeze_options = ['none', 'SF', 'BB_SF']
     scales = [0.25, 0.4]
-    lrs = [0.001, 0.0005, 0.0001]
+    lrs = [0.001, 0.0005, 0.0001, 0.005]
     sequences_names = ['breakdance', 'bmx-trees']
 
     current_idx = 0

@@ -32,7 +32,7 @@ class DAVISSequenceDataset(Dataset):
 
         self.random_horizontal_flip = data_aug.RandomHorizontalFlip()
         if cfg is None:
-            self.scale = data_aug.RandomScale(scale=(0.25))
+            self.scale = data_aug.RandomScale(scale=(0.4))
         else:
             self.scale = data_aug.RandomScale(scale=(cfg.scale))
         self.rotate = data_aug.RandomRotate(angle=30)

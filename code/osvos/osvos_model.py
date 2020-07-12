@@ -11,7 +11,6 @@ class OsvosSegmentationModel(SegmentationModel):
         self.use_caching = False
         self.requires_grad = {'backbone': True, 'slowfast': True}
         if cfg is None:
-            # Unfreeze all weights
             self.requires_grad['backbone'] = True
             self.requires_grad['slowfast'] = False
         else:

@@ -1,8 +1,14 @@
+% !TeX spellcheck = en_US
 \section{Experiments}
-EGE
-\subsection{Hyperparameter Tuning}
+As our network has can be applied in many different configurations, both in terms of pathway size but also in terms of freezing certain layers etc, we conducted several experiments. The qualitative results can be found here TODO
+%TODO qualitative link
 
+\subsection{Hyperparameter Tuning}
+As our resources were limited, we relied on previous works for some decisions such as which optimizer to use. Nonetheless, for the unsupervised case, we experimented with 3 different learning rates and also freezing the backbone or not. In the end we settled on 0.001 as lr and freezing the backbone, as training it didn't provide much improvement but came at a big cost of speed. For the semi-supervised case we actually ran in total 36 different experiments for every configuration, which tested different amount of data augmentations, learning rate and freezing different parts of the network. For every pathway configuration except for pathway size 1-1, the best performing configuration was only freezing the SlowFast part of the network, a random scale of 0.25 and learning rate of 0.001. For 1-1, everything is the same except random scale which was 0.4 for the best configuration. We used the best performing configurations in the following experiments.
 
 \subsection{Pathway Configurations}
+The main goal of the pathway configurations are two fold, first two show that using more temporal context provides a benefit, and second to show the benefit of SlowFast. 
+For both of these, we created a baseline configuration, 1-1, which doesn't use any temporal context. We then created two additional architectures 3-3 and 7-7 which progressively use more temporal context, but also work get slower with the increased capacity. It is important to note that these 3 configurations are not using a SlowFast inspired architecture, as both of the pathways have the same size. In addition to these 3, we tested 1-7 and 3-7 configurations, both utilizing the concept of SlowFast.
 
-\subsection{Qualitative Results}
+The first three experiments are to show the benefit of seeing more temporal context. The last two are to see the benefit of SlowFast. 
+% TODO should I specify when their would be a benefit, or should we present the results and then argue what the benefit is and isn't

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.5.7)  17 JUL 2020 11:41
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.5.7)  17 JUL 2020 14:08
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -307,11 +307,7 @@ File: l3backend-pdfmode.def 2020-03-12 L3 backend support: PDF mode
 \l__kernel_color_stack_int=\count270
 \l__pdf_internal_box=\box49
 )
-(./egpaper_final.aux
-
-LaTeX Warning: Label `unsupervised_results' multiply defined.
-
-)
+(./egpaper_final.aux)
 \openout1 = `egpaper_final.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 27.
@@ -332,7 +328,8 @@ LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 27.
 LaTeX Font Info:    ... okay on input line 27.
 LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 2
 7.
- (/usr/local/texlive/2020/texmf-dist/tex/latex/psnfss/ot1ptm.fd
+
+(/usr/local/texlive/2020/texmf-dist/tex/latex/psnfss/ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
 ABD: EveryShipout initializing macros
@@ -426,23 +423,24 @@ Underfull \vbox (badness 6396) has occurred while \output is active []
  <./figures/architecture.png>]) (./chapters/Experiments.tex
 
 LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 16.
+               Default added (so using `tbp') on input line 18.
 
 
-Overfull \hbox (47.60173pt too wide) in paragraph at lines 18--27
+Overfull \hbox (13.81223pt too wide) in paragraph at lines 20--29
  [][] 
  []
 
 
 LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 31.
+               Default added (so using `tbp') on input line 33.
 
-) (./chapters/Evaluation.tex) (./chapters/Conclusion.tex) (./egpaper_final.bbl
+) (./chapters/Evaluation.tex [2 <./figures/slowfast.png>])
+(./chapters/Conclusion.tex) (./egpaper_final.bbl
 Underfull \hbox (badness 1024) in paragraph at lines 27--31
 \OT1/ptm/m/n/9 bel[]aez, Alexan-der Sorkine-Hornung, and Luc Van Gool.
  []
 
-[2 <./figures/slowfast.png>])
+)
 Package atveryend Info: Empty hook `BeforeClearDocument' on input line 66.
  [3
 
@@ -451,29 +449,25 @@ Package atveryend Info: Empty hook `AfterLastShipout' on input line 66.
  (./egpaper_final.aux)
 Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 66.
 Package atveryend Info: Empty hook `AtEndAfterFileList' on input line 66.
-
-
-LaTeX Warning: There were multiply-defined labels.
-
 Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 66.
  ) 
 Here is how much of TeX's memory you used:
  7760 strings out of 480608
- 118579 string characters out of 5903631
- 385003 words of memory out of 5000000
- 23454 multiletter control sequences out of 15000+600000
+ 118590 string characters out of 5903631
+ 385126 words of memory out of 5000000
+ 23455 multiletter control sequences out of 15000+600000
  552464 words of font info for 70 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 41i,9n,42p,1014b,470s stack positions out of 5000i,500n,10000p,200000b,80000s
+ 41i,9n,42p,1018b,344s stack positions out of 5000i,500n,10000p,200000b,80000s
 {/usr/local/texlive/2020/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/t
 exlive/2020/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2
 020/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2020/texmf-
 dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2020/texmf-dist/fonts
 /type1/urw/times/utmri8a.pfb>
-Output written on egpaper_final.pdf (3 pages, 322515 bytes).
+Output written on egpaper_final.pdf (3 pages, 323907 bytes).
 PDF statistics:
- 80 PDF objects out of 1000 (max. 8388607)
- 66 compressed objects within 1 object stream
- 27 named destinations out of 1000 (max. 500000)
+ 82 PDF objects out of 1000 (max. 8388607)
+ 68 compressed objects within 1 object stream
+ 26 named destinations out of 1000 (max. 500000)
  11 words of extra memory for PDF output out of 10000 (max. 10000000)
 

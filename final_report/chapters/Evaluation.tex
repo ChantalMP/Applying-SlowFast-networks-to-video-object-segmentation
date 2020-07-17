@@ -4,4 +4,6 @@ Our first observation is that in our case temporal context improves the unsuperv
 
 In the semi-supervised experiments we only very little temporal benefit between 3-3 and 7-7 and no between 1-1 and 3-3. We also see a small improvement between 3-3 and 3-7 but a small regression from 1-1 to 1-7. Overall the small differences indicate neither temporal context nor SlowFast have significant influence on the OSVOS results.
 
+Performance wise one can see the parameter count increases marginally with bigger pathway sizes, but the evaluation time increases significantly. The slow pathway has significantly more influence on the time, like we see when comparing e.g. evaluation time of 3-3, 3-7 and 7-7.
 
+Overall, mainly as the benefit of temporal context vanishes quickly, the benefit of SlowFast for our tasks appears to be limited. 

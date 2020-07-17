@@ -4,7 +4,7 @@ As our network has can be applied in many different configurations, both in term
 %TODO qualitative link
 
 \subsection{Hyperparameter Tuning}
-As our resources were limited, we relied on previous works for some decisions such as which optimizer to use. Nonetheless, for the unsupervised case, we experimented with 3 different learning rates and also freezing the backbone or not. In the end we settled on 0.001 as lr and freezing the backbone, as training it didn't provide much improvement but came at a big cost of speed. For the semi-supervised case we actually ran in total 36 different experiments for every configuration, which tested different amount of data augmentations, learning rate and freezing different parts of the network. For every pathway configuration except for pathway size 1-1, the best performing configuration was only freezing the SlowFast part of the network, a random scale of 0.25 and learning rate of 0.001. For 1-1, everything is the same except random scale which was 0.4 for the best configuration. We used the best performing configurations in the following experiments.
+As our resources were limited, we relied on previous works for some decisions such as which optimizer to use. Nonetheless, for the unsupervised case, we experimented with 3 different learning rates and also freezing the backbone or not. In the end we settled on 0.001 as lr and freezing the backbone, as training it didn't provide much improvement but came at a big cost of speed. For the semi-supervised case we actually ran in total 36 different experiments for every configuration, which tested different amount of data augmentations, learning rate and freezing different parts of the network. For every pathway configuration except for pathway size 1-1, the best performing configuration was only freezing the SlowFast part of the network, a random scale of 0.25 and learning rate of 0.001. For 1-1, everything is the same except random scale which was 0.4 for the best configuration. We used the best performing configurations in all the following experiments.
 
 \subsection{Pathway Configurations}
 The main goal of the pathway configurations are two fold, first two show that using more temporal context provides a benefit, and second to show the benefit of SlowFast. 
@@ -13,24 +13,26 @@ For both of these, we created a baseline configuration, 1-1, which doesn't use a
 The first three experiments are to show the benefit of seeing more temporal context. The last two are to see the benefit of SlowFast. 
 % TODO should I specify when their would be a benefit, or should we present the results and then argue what the benefit is and isn't
 
+\subsection{Results}
+Table~\ref{unsupervised_results} and \ref{semi_supervised_results} show the results for the unsupervised, respectively semi-supervised experiments. As evaluation metric we use J\&F Mean, like described in the DAVIS16\cite{davis_2016} paper.
 \begin{table}[]
 	\centering
-	\begin{tabular}{|l|l|l|l|}
+	\begin{tabular}{|c|c|c|c|}
 		\cline{1-4}
-		Configuration & J \& F Mean & Parameter Count & Evaluation Time\\ \cline{1-4}
-		1-1  & 0.645  & & \\ \cline{1-4}
-		3-3    & 0.679 & & \\ \cline{1-4}
-		7-7    & 0.673 & & \\ \cline{1-4}
-		1-7    & 0.655  & & \\ \cline{1-4}
-		3-7    & 0.676  & & \\ \cline{1-4}
+		Configuration & J \& F Mean & Param. Count & Eval. Time \\ \cline{1-4}
+		1-1  & 0.645  & 45,421,851 & 477 sec\\ \cline{1-4}
+		3-3    & 0.679 & 46,398,747 & 544 sec\\ \cline{1-4}
+		7-7    & 0.673 & 48,407,835 & 853 sec\\ \cline{1-4}
+		1-7    & 0.655  & 45,618,459 & 528 sec\\ \cline{1-4}
+		3-7    & 0.676  & 46,570,779 & 584 sec\\ \cline{1-4}
 	\end{tabular}
-	\caption{Unsupervised VOS results on DAVIS16 validation set.}
+	\caption{Unsupervised VOS results on DAVIS16 validation set. The Evaluation Time refers to computation of masks for all validation sequences.}
 	\label{unsupervised_results}
 \end{table}
 
 \begin{table}[]
 	\centering
-	\begin{tabular}{|l|l|}
+	\begin{tabular}{|c|c|}
 		\cline{1-2}
 		Configuration & J \& F Mean\\ \cline{1-2}
 		1-1  & 0.747  \\ \cline{1-2}
@@ -40,5 +42,5 @@ The first three experiments are to show the benefit of seeing more temporal cont
 		3-7    & 0.758  \\ \cline{1-2}
 	\end{tabular}
 	\caption{Semi-supervised VOS results on DAVIS16 validation set.}
-	\label{unsupervised_results}
+	\label{semi_supervised_results}
 \end{table}

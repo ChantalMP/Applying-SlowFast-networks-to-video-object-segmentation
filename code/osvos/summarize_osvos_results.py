@@ -2,12 +2,12 @@ import json
 from statistics import mean
 
 if __name__ == '__main__':
-    json_path = 'model_maskrcnn_slowfast_sp_3fp_7_all_results.json'
+    json_path = 'data/output/osvos_results/model_maskrcnn_slowfast_sp_1fp_1_all_results.json'
 
     with open(json_path) as f:
         all_results_model = json.load(f)
 
-    for epoch_idx in range(5):
+    for epoch_idx in range(10):
         jf_means = []
         j_means = []
         f_means = []

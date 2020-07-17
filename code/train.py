@@ -58,7 +58,7 @@ def main():
     # TODO test eval time working correctly
     # TODO test fixing working correctly
     epochs = 20
-    lr = 0.0005
+    lr = 0.001
     weight_decay = 0.0001
 
     transforms = Compose([ToTensor()])

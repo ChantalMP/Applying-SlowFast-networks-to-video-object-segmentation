@@ -1,7 +1,7 @@
 import json
 from statistics import mean
 
-from helpers.constants import data_output_path, slow_pathway_size, fast_pathway_size
+from helpers.constants import slow_pathway_size, fast_pathway_size, osvos_experiments_path
 from osvos.experiment_config import ExperimentConfig
 from osvos.train_osvos import main as train_osvos
 
@@ -9,7 +9,7 @@ from osvos.train_osvos import main as train_osvos
 def main():
     freeze_options = ['none', 'SF', 'BB_SF']
     scales = [0.25, 0.4]
-    lrs = [0.001, 0.0005, 0.0001]
+    lrs = [0.001, 0.0005, 0.0001, 0.005]
     sequences_names = ['breakdance', 'bmx-trees']
 
     current_idx = 0
@@ -20,8 +20,8 @@ def main():
                 config = ExperimentConfig(freeze=freeze, lr=lr, scale=scale, epochs=5)
 
                 config_name = f"osvos_sp_{slow_pathway_size}fp_{fast_pathway_size}_freeze_{freeze}_scale_{scale}_lr_{lr}"
-                json_output_path = data_output_path / "osvos_experiments" / f"{config_name}.json"
-                txt_output_path = data_output_path / "osvos_experiments" / f"{config_name}.txt"
+                json_output_path = osvos_experiments_path / f"{config_name}.json"
+                txt_output_path = osvos_experiments_path / f"{config_name}.txt"
 
                 # skip experiments that were already done
                 if json_output_path.exists():

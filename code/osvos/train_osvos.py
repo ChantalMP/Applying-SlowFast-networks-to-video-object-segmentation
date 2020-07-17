@@ -38,7 +38,7 @@ def evaluate_model(model, device, sequence_name):
 
 def main(sequence_name, cfg=None):
     if cfg is None:
-        epochs = 5
+        epochs = 10
         lr = 0.001
     else:
         epochs = cfg.epochs

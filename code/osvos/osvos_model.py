@@ -9,14 +9,11 @@ class OsvosSegmentationModel(SegmentationModel):
     def __init__(self, device, slow_pathway_size, fast_pathway_size, batchsize=8, cfg=None):
         super(OsvosSegmentationModel, self).__init__(device, slow_pathway_size, fast_pathway_size)
         self.use_caching = False
+        self.requires_grad = {'backbone': True, 'slowfast': True}
         if cfg is None:
-            # Unfreeze all weights
-            for param in self.maskrcnn_model.backbone.parameters():
-                param.requires_grad = True
-            for param in self.maskrcnn_model.rpn.parameters():
-                param.requires_grad = True
+            self.requires_grad['backbone'] = True
+            self.requires_grad['slowfast'] = False
         else:
-            self.requires_grad = {'backbone': True, 'slowfast': True}
             if cfg.freeze == 'SF':
                 self.requires_grad['slowfast'] = False
             elif cfg.freeze == 'BB_SF':
@@ -24,12 +21,12 @@ class OsvosSegmentationModel(SegmentationModel):
                 self.requires_grad['backbone'] = False
                 self.use_caching = True
 
-            for param in self.maskrcnn_model.backbone.parameters():
-                param.requires_grad = self.requires_grad['backbone']
-            for param in self.maskrcnn_model.rpn.parameters():
-                param.requires_grad = self.requires_grad['backbone']
-            for param in self.slow_fast.parameters():
-                param.requires_grad = self.requires_grad['slowfast']
+        for param in self.maskrcnn_model.backbone.parameters():
+            param.requires_grad = self.requires_grad['backbone']
+        for param in self.maskrcnn_model.rpn.parameters():
+            param.requires_grad = self.requires_grad['backbone']
+        for param in self.slow_fast.parameters():
+            param.requires_grad = self.requires_grad['slowfast']
 
         self.bs = batchsize
         self.maskrcnn_model.roi_heads.detections_per_img = 10

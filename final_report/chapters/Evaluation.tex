@@ -1,5 +1,7 @@
+% !TeX spellcheck = en_US
 \section{Evaluation}
-EGE
-\subsection{Unsupervised}
+Our first observation is that in our case temporal context improves the unsupervised segmentation results, but only up to three seen frames, as can be seen by comparing the results of 1-1, 3-3 and 7-7. As SlowFast networks are mainly designed to see a lot of temporal context in the fast pathway and large temporal context does not seem to be beneficial, the potential benefit is small. When we compare 1-1 with 1-7 and 3-3 with 3-7 we see that an improvement through a larger fast pathway size is only visible for a slow pathway size of one.
 
-\subsection{Semi-Supervised}
+In the semi-supervised experiments we only very little temporal benefit between 3-3 and 7-7 and no between 1-1 and 3-3. We also see a small improvement between 3-3 and 3-7 but a small regression from 1-1 to 1-7. Overall the small differences indicate neither temporal context nor SlowFast have significant influence on the OSVOS results.
+
+

@@ -12,3 +12,33 @@ For both of these, we created a baseline configuration, 1-1, which doesn't use a
 
 The first three experiments are to show the benefit of seeing more temporal context. The last two are to see the benefit of SlowFast. 
 % TODO should I specify when their would be a benefit, or should we present the results and then argue what the benefit is and isn't
+
+\begin{table}[]
+	\centering
+	\begin{tabular}{|l|l|l|l|}
+		\cline{1-4}
+		Configuration & J \& F Mean & Parameter Count & Evaluation Time\\ \cline{1-4}
+		1-1  & 0.645  & & \\ \cline{1-4}
+		3-3    & 0.679 & & \\ \cline{1-4}
+		7-7    & 0.673 & & \\ \cline{1-4}
+		1-7    & 0.655  & & \\ \cline{1-4}
+		3-7    & 0.676  & & \\ \cline{1-4}
+	\end{tabular}
+	\caption{Unsupervised VOS results on DAVIS16 validation set.}
+	\label{unsupervised_results}
+\end{table}
+
+\begin{table}[]
+	\centering
+	\begin{tabular}{|l|l|}
+		\cline{1-2}
+		Configuration & J \& F Mean\\ \cline{1-2}
+		1-1  & 0.747  \\ \cline{1-2}
+		3-3    & 0.747 \\ \cline{1-2}
+		7-7    & 0.755 \\ \cline{1-2}
+		1-7    & 0.741  \\ \cline{1-2}
+		3-7    & 0.758  \\ \cline{1-2}
+	\end{tabular}
+	\caption{Semi-supervised VOS results on DAVIS16 validation set.}
+	\label{unsupervised_results}
+\end{table}

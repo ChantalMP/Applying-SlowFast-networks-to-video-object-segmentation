@@ -1,6 +1,7 @@
+% !TeX spellcheck = en_US
 \section{Related Work}
-TALLE
-- SlowFast Networks
-- MaskRCNN
-- OSVOS
-- maybe track-RCNN
+The main work of consideration is the SlowFast Network \cite{slow_fast}, which introduces the idea of using two pathways to analyze a video. This architecture has one fast and one slow pathway, allowing it to concentrate on different aspects of the video while keeping the performance high. The slow pathway is computationally much more expensive than the fast pathway and works with less fps. In the original task of video action classification they show this two pathway approach is especially beneficial if there is a high speed action such as clapping or dancing involved.
+
+OSVOS \cite{osvos} focuses on the task of one-shot video segmentation, where in test time, the network is fine-tuned on the first frame of the video, which has a manually annotated mask. This fine-tuning allows the network to adapt to the object in that scene.
+
+Mask R-CNN \cite{mask_rcnn} is one of the best known architectures for image segmentation. They extend the popular faster R-CNN architecture with a masking layer at the end.

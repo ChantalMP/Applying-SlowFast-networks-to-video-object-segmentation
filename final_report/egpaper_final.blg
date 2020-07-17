@@ -2,47 +2,45 @@ This is BibTeX, Version 0.99d (TeX Live 2020)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: egpaper_final.aux
 The style file: ieee_fullname.bst
-I found no \citation commands---while reading file egpaper_final.aux
 Database file #1: egbib.bib
-You've used 0 entries,
+You've used 5 entries,
             2120 wiz_defined-function locations,
-            498 strings with 3741 characters,
-and the built_in function-call counts, 19 in all, are:
-= -- 0
-> -- 0
+            522 strings with 4611 characters,
+and the built_in function-call counts, 1765 in all, are:
+= -- 150
+> -- 145
 < -- 0
-+ -- 0
-- -- 0
-* -- 3
-:= -- 7
-add.period$ -- 0
-call.type$ -- 0
-change.case$ -- 0
++ -- 59
+- -- 52
+* -- 136
+:= -- 333
+add.period$ -- 15
+call.type$ -- 5
+change.case$ -- 41
 chr.to.int$ -- 0
-cite$ -- 0
-duplicate$ -- 0
-empty$ -- 1
-format.name$ -- 0
-if$ -- 1
+cite$ -- 5
+duplicate$ -- 54
+empty$ -- 97
+format.name$ -- 52
+if$ -- 335
 int.to.chr$ -- 0
-int.to.str$ -- 0
-missing$ -- 0
-newline$ -- 3
-num.names$ -- 0
-pop$ -- 0
+int.to.str$ -- 5
+missing$ -- 5
+newline$ -- 28
+num.names$ -- 10
+pop$ -- 39
 preamble$ -- 1
-purify$ -- 0
+purify$ -- 36
 quote$ -- 0
-skip$ -- 1
+skip$ -- 38
 stack$ -- 0
-substring$ -- 0
-swap$ -- 0
+substring$ -- 27
+swap$ -- 6
 text.length$ -- 0
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 0
+type$ -- 20
 warning$ -- 0
-while$ -- 0
-width$ -- 0
-write$ -- 2
-(There was 1 error message)
+while$ -- 10
+width$ -- 6
+write$ -- 55

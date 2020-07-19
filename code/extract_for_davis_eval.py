@@ -1,14 +1,16 @@
-from torch.utils.data import DataLoader
-from helpers.dataset import DAVISDataset
+from pathlib import Path
+
+import numpy as np
 import torch
+from PIL import Image
+from copy import deepcopy
+from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
-import numpy as np
-from copy import deepcopy
-from PIL import Image
-from pathlib import Path
-from helpers.model import SegmentationModel
+
 from helpers.constants import best_model_path, slow_pathway_size, fast_pathway_size, model_name
+from helpers.dataset import DAVISDataset
+from helpers.model import SegmentationModel
 
 
 def extract_for_davis_evaluation(model):

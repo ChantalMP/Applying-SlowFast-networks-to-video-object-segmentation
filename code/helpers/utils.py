@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
-from matplotlib import pyplot as plt
 from matplotlib import patches
+from matplotlib import pyplot as plt
 
 
 def convert_mask_pred_to_ground_truth_format(img, box, mask, threshold=0.5):

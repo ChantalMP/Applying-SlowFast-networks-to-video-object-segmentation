@@ -1,14 +1,16 @@
-from torch.utils.data import DataLoader
 import statistics
-from helpers.dataset import DAVISDataset
+
+import numpy as np
 import torch
+from copy import deepcopy
+from matplotlib import pyplot as plt
+from torch.utils.data import DataLoader
 from torchvision.transforms import Compose, ToTensor
 from tqdm import tqdm
-from matplotlib import pyplot as plt
-import numpy as np
-from helpers.utils import intersection_over_union
-from copy import deepcopy
+
 from helpers.constants import eval_output_path, model_name, pred_output_path
+from helpers.dataset import DAVISDataset
+from helpers.utils import intersection_over_union
 
 
 def evaluate(model, writer=None, global_step=None, save_all_imgs=False):

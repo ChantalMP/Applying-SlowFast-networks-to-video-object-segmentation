@@ -1,17 +1,11 @@
-import os
 from glob import glob
-from collections import defaultdict
-import numpy as np
-from PIL import Image
 
-from torch.utils.data import Dataset, DataLoader
-from matplotlib import pyplot as plt
 import matplotlib.patches as patches
+import numpy as np
+import os
 import torch
-from math import ceil
-from tqdm import tqdm
-from DataAugmentationForObjectDetection.data_aug import data_aug
-from helpers.utils import visualize_image_with_properties
+from PIL import Image
+from torch.utils.data import Dataset, DataLoader
 
 
 # For reference on how to e.g. visualize the masks see: https://github.com/davisvideochallenge/davis2017-evaluation/blob/master/davis2017/davis.py

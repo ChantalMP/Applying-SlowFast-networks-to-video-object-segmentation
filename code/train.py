@@ -24,7 +24,8 @@ import os
 import random
 import torch
 
-from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, continue_training, random_seed, writer_dir
+from helpers.constants import best_model_path, model_path, checkpoint_path, slow_pathway_size, fast_pathway_size, continue_training, random_seed, \
+    writer_dir
 
 # As deterministic as possible
 random.seed(random_seed)

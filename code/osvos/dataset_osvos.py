@@ -138,7 +138,6 @@ class DAVISSequenceDataset(Dataset):
 
 
 if __name__ == '__main__':
-
     ds = DAVISSequenceDataset(root='data/DAVIS_2016', sequence_name='camel', fast_pathway_size=7, transforms=Compose([ToTensor()]))
 
     img, target = ds[0]

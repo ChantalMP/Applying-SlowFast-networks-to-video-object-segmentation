@@ -1,9 +1,9 @@
 % !TeX spellcheck = en_US
 \section{Evaluation}
-Our first observation is that in our case temporal context improves the unsupervised segmentation results, but only up to three frames, as can be seen by comparing the results of 1-1, 3-3 and 7-7. As SlowFast networks are mainly designed to see a lot of temporal context in the fast pathway and this does not seem to be beneficial here, the potential benefit is small. When we compare 1-1 to 1-7 and 3-3 to 3-7 we only see an improvement through a larger fast pathway size for a slow pathway size of one.
+Our first observation is that in our case temporal context improves the unsupervised segmentation results, but only up to three frames, as can be seen by comparing the results of 1-1, 3-3 and 7-7. As SlowFast networks are mainly designed to see a lot of temporal context in the fast pathway and this does not seem to be beneficial here, the potential benefit is small. When we compare 1-1 to 1-7 and 3-3 to 3-7, we only see an improvement through a larger fast pathway size if the slow pathway size is one.
 
-In the semi-supervised experiments we only see little temporal benefit between 3-3 and 7-7 and none between 1-1 and 3-3. We also see a small improvement between 3-3 and 3-7 but a small regression from 1-1 to 1-7. Overall the small differences indicate neither temporal context nor SlowFast have significant influence on the OSVOS results.
+In the semi-supervised experiments we only see little temporal benefit between 3-3 and 7-7 and none between 1-1 and 3-3. We also see a small improvement between 3-3 and 3-7 but a small regression from 1-1 to 1-7. Overall the small differences indicate in our case neither temporal context nor SlowFast have significant influence on the OSVOS results.
 
-Performance wise the parameter count increases with bigger pathway sizes, but the evaluation time increases significantly. The slow pathway has significantly more influence on both, as can be seen by comparing 3-3, 3-7 and 7-7.
+Performance wise, with bigger pathway sizes, both the parameter count and especially the evaluation time increase. The slow pathway has significantly more influence on both, as can be seen by comparing 3-3, 3-7 and 7-7.
 
-Overall the benefit of SlowFast for our tasks appears to be limited. 
+Overall for our tasks the benefit of SlowFast appears to be limited. 

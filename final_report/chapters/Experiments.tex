@@ -1,18 +1,18 @@
 % !TeX spellcheck = en_US
 \section{Experiments}
 We conducted several experiments for both hyper-parameter tuning and the evaluation of different configurations.
-The qualitative results can be found here TODO
+The qualitative results can be found here \url{https://www.youtube.com/playlist?list=PLog3nOPCjKBnjhuHMIXu4ISE4Z4f2jm39}
 %TODO qualitative link
 
 \subsection{Hyperparameter Search}
 As our resources were limited, we relied on previous works for some decisions such as which optimizer to use. Nonetheless, for the unsupervised case, we experimented with 3 different learning rates and also freezing the backbone or not. In the end we settled on 0.001 as lr and freezing the backbone, as training it did not provide much improvement but came at a big cost of speed. For the semi-supervised case we ran 36 experiments for every pathway configuration, which tested different settings for data augmentation, learning rate and freezing different parts of the network. Following the results we freeze only the SlowFast part of the network and use a random scale of 0.25 or 0.4 (only for 1-1) and learning rate of 0.001.
 
 \subsection{Pathway Configurations}
-The main goal of the pathway configurations are to show that more temporal context provides a benefit and the benefit of SlowFast. We denote our configurations as m-n, where m/n refers to the \#frames given to the slow/fast pathway.
+The main goal of the pathway configurations is to show the benefit of more temporal context and the SlowFast concept. We denote our configurations as m-n, where m/n refers to the number of frames given to the slow/fast pathway.
 We create a baseline configuration, 1-1, which does not use any temporal context and two additional architectures 3-3 and 7-7 which progressively use more temporal context. These three configurations are not using a SlowFast inspired architecture, as both of the pathways have the same size. In addition to these three, we test 1-7 and 3-7, both utilizing the concept of SlowFast.
 
 \subsection{Results}
-Table~\ref{unsupervised_results} and \ref{semi_supervised_results} show the results for the unsupervised, respectively semi-supervised experiments. As evaluation metric we use J\&F Mean, like described in the DAVIS16\cite{davis_2016} paper.
+Table~\ref{unsupervised_results} and \ref{semi_supervised_results} show the results for the unsupervised, respectively semi-supervised experiments. As evaluation metric we use J\&F Mean, like described in the DAVIS16\cite{davis_2016}.
 \begin{table}[]
 	\centering
 	\begin{tabular}{|c|c|c|c|}

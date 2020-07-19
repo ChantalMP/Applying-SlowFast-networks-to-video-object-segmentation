@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.5.7)  19 JUL 2020 12:04
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.5.7)  19 JUL 2020 12:06
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -419,32 +419,32 @@ ftex/updmap/pdftex.map}
 
 
  <./figures/architecture.png> <./figures/slowfast.png>]
-Underfull \hbox (badness 1895) in paragraph at lines 3--6
+Underfull \hbox (badness 1895) in paragraph at lines 3--5
 []\OT1/ptm/m/n/10 We con-ducted sev-eral ex-per-i-ments for both hyper-
  []
 
 
-Underfull \hbox (badness 1515) in paragraph at lines 3--6
+Underfull \hbox (badness 1515) in paragraph at lines 3--5
 \OT1/ptm/m/n/10 parameter tun-ing and the eval-u-a-tion of dif-fer-ent con-
  []
 
 
-Underfull \hbox (badness 5667) in paragraph at lines 3--6
+Underfull \hbox (badness 5667) in paragraph at lines 3--5
 \OT1/ptm/m/n/10 fig-u-ra-tions. The qual-i-ta-tive re-sults can be found
  []
 
 
 LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 16.
+               Default added (so using `tbp') on input line 15.
 
 
-Overfull \hbox (13.81223pt too wide) in paragraph at lines 18--27
+Overfull \hbox (13.81223pt too wide) in paragraph at lines 17--26
  [][] 
  []
 
 
 LaTeX Warning: No positions in optional float specifier.
-               Default added (so using `tbp') on input line 31.
+               Default added (so using `tbp') on input line 30.
 
 ) (./chapters/Evaluation.tex) (./chapters/Conclusion.tex) (./egpaper_final.bbl
 Underfull \vbox (badness 3612) has occurred while \output is active []

@@ -2,7 +2,6 @@
 \section{Experiments}
 We conducted several experiments for both hyper-parameter tuning and the evaluation of different configurations.
 The qualitative results can be found here \url{https://www.youtube.com/watch?v=Exw_RgEA07w&feature=youtu.be}
-%TODO qualitative link
 
 \subsection{Hyperparameter Search}
 As our resources were limited, we relied on previous works for some decisions such as which optimizer to use. Nonetheless, for the unsupervised case, we experimented with 3 different learning rates and also freezing the backbone or not. In the end we settled on 0.001 as lr and freezing the backbone, as training it did not provide much improvement but came at a big cost of speed. For the semi-supervised case we ran 36 experiments for every pathway configuration, which tested different settings for data augmentation, learning rate and freezing different parts of the network. Following the results we freeze only the SlowFast part of the network and use a random scale of 0.25 or 0.4 (only for 1-1) and learning rate of 0.001.

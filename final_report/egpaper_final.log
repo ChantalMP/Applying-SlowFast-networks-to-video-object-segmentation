@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.5.7)  19 JUL 2020 11:43
+This is pdfTeX, Version 3.14159265-2.6-1.40.21 (TeX Live 2020) (preloaded format=pdflatex 2020.5.7)  19 JUL 2020 12:04
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -429,8 +429,8 @@ Underfull \hbox (badness 1515) in paragraph at lines 3--6
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 3--6
-[]$\OT1/pcr/m/n/10 https : / / www . youtube . com / playlist ? list =
+Underfull \hbox (badness 5667) in paragraph at lines 3--6
+\OT1/ptm/m/n/10 fig-u-ra-tions. The qual-i-ta-tive re-sults can be found
  []
 
 
@@ -478,7 +478,7 @@ exlive/2020/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2
 020/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/local/texlive/2020/texmf-
 dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2020/texmf-dist/fonts
 /type1/urw/times/utmri8a.pfb>
-Output written on egpaper_final.pdf (3 pages, 331169 bytes).
+Output written on egpaper_final.pdf (3 pages, 329911 bytes).
 PDF statistics:
  87 PDF objects out of 1000 (max. 8388607)
  73 compressed objects within 1 object stream
